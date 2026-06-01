@@ -432,7 +432,12 @@ function renderClientes(){
 function openModalCliente(id){
   const c=id?STATE.clientes.find(x=>x.id===id):{};
   showModal(`<div class="modal modal-sm"><div class="modal-header"><span class="modal-title">${id?'Editar cliente':'Nuevo cliente'}</span><button class="modal-close" onclick="closeModal()">×</button></div>
-  <div class="modal-body"><div class="form-grid">
+  <div class="modal-body">
+  <div id="contact-picker-bar" style="display:none;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:var(--r);padding:9px 12px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:12px;color:var(--gold)">📱 Importar desde tus contactos</span>
+    <button class="btn btn-sm" style="background:var(--gold);color:var(--bg);border:none" onclick="pickContact()">Seleccionar contacto</button>
+  </div>
+  <div class="form-grid">
     <div class="form-group"><label class="form-label">Nombre *</label><input id="c-nom" value="${c.nombre||''}"></div>
     <div class="form-group"><label class="form-label">Teléfono</label><input id="c-tel" value="${c.tel||''}"></div>
     <div class="form-group"><label class="form-label">Email</label><input type="email" id="c-email" value="${c.email||''}"></div>
@@ -442,6 +447,7 @@ function openModalCliente(id){
   </div></div>
   <div class="modal-footer"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-gold" onclick="saveCliente('${id||''}')">Guardar</button></div>
   </div>`);
+  setTimeout(checkContactPickerSupport,100);
 }
 async function saveCliente(id){
   const nom=document.getElementById('c-nom').value.trim();
@@ -506,7 +512,12 @@ function openModalOrden(id,clienteId){
   showModal(`<div class="modal"><div class="modal-header"><span class="modal-title">${id?'Editar orden':'Nueva orden'}</span><button class="modal-close" onclick="closeModal()">×</button></div>
   <div class="modal-body">
     <div class="form-grid">
-      <div class="form-group"><label class="form-label">Cliente *</label><select id="o-cli">${cliOpts}</select></div>
+      <div class="form-group"><label class="form-label">Cliente *</label>
+        <div style="display:flex;gap:7px;align-items:center">
+          <select id="o-cli" style="flex:1">${cliOpts}</select>
+          <button class="btn btn-sm" id="btn-import-contact-ord" title="Importar de contactos" style="flex-shrink:0;display:none;padding:7px 10px">📱</button>
+        </div>
+      </div>
       <div class="form-group"><label class="form-label">Tipo</label><select id="o-tipo">${tipoOpts}</select></div>
       <div class="form-group full"><label class="form-label">Descripción *</label><textarea id="o-desc" rows="2">${o?o.desc:''}</textarea></div>
       <div class="form-group"><label class="form-label">Fecha entrada</label><input type="date" id="o-fin" value="${o?o.fechaIn||today():today()}"></div>
@@ -544,6 +555,7 @@ function openModalOrden(id,clienteId){
   <div class="modal-footer"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-gold" onclick="saveOrden('${id||''}')">Guardar orden</button></div>
   </div>`);
   renderMatRows();renderPagoRows();updatePresup();
+  setTimeout(checkContactPickerSupport,100);
 }
 
 function appendNota(t){const ta=document.getElementById('o-notas');if(ta)ta.value=ta.value?(ta.value+(ta.value.endsWith('\n')?'':'\n')+t):t;}
@@ -565,7 +577,8 @@ function updatePresup(){
 function renderMatRows(){
   var c=document.getElementById('mat-rows');if(!c)return;
   c.innerHTML='';
-  tempMats.forEach(function(m,i){
+  for(var i=0;i<tempMats.length;i++){
+    var m=tempMats[i];
     var uOpts=UNIDADES.map(function(u){return'<option'+(m.unidad===u?' selected':'')+'>'+u+'</option>';}).join('');
     var sub=fmt((parseFloat(m.cant)||0)*(parseFloat(m.precio)||0));
     var row=document.createElement('div');
@@ -585,12 +598,26 @@ function renderMatRows(){
     inp.addEventListener('focus',function(){showPickerFiltered(i,this.value);});
     inp.addEventListener('keydown',function(e){if(e.key==='Escape'){var pd=document.getElementById('picker-drop');if(pd)pd.innerHTML='';}});
     row.querySelector('.mat-picker-btn').addEventListener('click',function(){showPickerFiltered(i,inp.value);});
-    row.querySelector('[data-mat-cant]').addEventListener('input',function(){tempMats[i].cant=this.value;var s=(parseFloat(tempMats[i].cant)||0)*(parseFloat(tempMats[i].precio)||0);var el=document.getElementById('mat-sub-'+i);if(el)el.textContent=fmt(s);updatePresup();});
-    row.querySelector('[data-mat-uni]').addEventListener('change',function(){tempMats[i].unidad=this.value;});
-    row.querySelector('[data-mat-pre]').addEventListener('input',function(){tempMats[i].precio=this.value;var s=(parseFloat(tempMats[i].cant)||0)*(parseFloat(tempMats[i].precio)||0);var el=document.getElementById('mat-sub-'+i);if(el)el.textContent=fmt(s);updatePresup();});
-    row.querySelector('[data-mat-del]').addEventListener('click',function(){tempMats.splice(i,1);renderMatRows();updatePresup();});
-    c.appendChild(row);
-  });
+    (function(idx){
+      row.querySelector('[data-mat-cant]').addEventListener('input',function(){
+        tempMats[idx].cant=this.value;
+        var s=(parseFloat(tempMats[idx].cant)||0)*(parseFloat(tempMats[idx].precio)||0);
+        var el=document.getElementById('mat-sub-'+idx);if(el)el.textContent=fmt(s);
+        updatePresup();
+      });
+      row.querySelector('[data-mat-uni]').addEventListener('change',function(){tempMats[idx].unidad=this.value;});
+      row.querySelector('[data-mat-pre]').addEventListener('input',function(){
+        tempMats[idx].precio=this.value;
+        var s=(parseFloat(tempMats[idx].cant)||0)*(parseFloat(tempMats[idx].precio)||0);
+        var el=document.getElementById('mat-sub-'+idx);if(el)el.textContent=fmt(s);
+        updatePresup();
+      });
+      row.querySelector('[data-mat-del]').addEventListener('click',function(){
+        tempMats.splice(idx,1);renderMatRows();updatePresup();
+      });
+    })(i);
+        c.appendChild(row);
+  }
   updatePresup();
 }
 
@@ -890,6 +917,64 @@ document.getElementById('btnGoogle').addEventListener('click',()=>{
   auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>notify('Error al iniciar sesión: '+e.message,true));
 });
 document.getElementById('btnSignOut').addEventListener('click',()=>auth.signOut());
+
+// -- CONTACT PICKER --
+async function pickContact(){
+  if(!('contacts' in navigator&&'ContactsManager' in window)){
+    notify('Disponible solo en Chrome para Android.',true);return;
+  }
+  try{
+    var contacts=await navigator.contacts.select(['name','tel'],{multiple:false});
+    if(!contacts||!contacts.length)return;
+    var c=contacts[0];
+    var name=(c.name&&c.name[0])||'';
+    var tel=(c.tel&&c.tel[0])||'';
+    var n=document.getElementById('c-nom');var t=document.getElementById('c-tel');
+    if(n&&name)n.value=name;
+    if(t&&tel)t.value=tel;
+    notify('Contacto importado');
+  }catch(e){if(e.name!=='AbortError')notify('Error al acceder a contactos',true);}
+}
+
+async function pickContactForOrden(){
+  if(!('contacts' in navigator&&'ContactsManager' in window)){
+    notify('Disponible solo en Chrome para Android.',true);return;
+  }
+  try{
+    var contacts=await navigator.contacts.select(['name','tel'],{multiple:false});
+    if(!contacts||!contacts.length)return;
+    var c=contacts[0];
+    var name=(c.name&&c.name[0])||'';
+    var tel=(c.tel&&c.tel[0])||'';
+    if(!name){notify('No se encontro nombre',true);return;}
+    var existing=STATE.clientes.find(function(x){return x.nombre.toLowerCase()===name.toLowerCase()||(tel&&x.tel===tel);});
+    if(existing){
+      var sel=document.getElementById('o-cli');
+      if(sel)sel.value=existing.id;
+      notify('Cliente: '+existing.nombre);return;
+    }
+    if(confirm('No encontre a "'+name+'" en clientes. Agregar como nuevo?')){
+      var newId=uid();
+      await saveDoc('clientes',{id:newId,nombre:name,tel:tel||'',email:'',cedula:'',dir:'',notas:'',fechaReg:today()});
+      setTimeout(function(){
+        var sel=document.getElementById('o-cli');
+        if(sel){var opt=document.createElement('option');opt.value=newId;opt.textContent=name;opt.selected=true;sel.appendChild(opt);}
+        notify('Cliente agregado: '+name);
+      },600);
+    }
+  }catch(e){if(e.name!=='AbortError')notify('Error al acceder a contactos',true);}
+}
+
+function checkContactPickerSupport(){
+  var supported='contacts' in navigator&&'ContactsManager' in window;
+  var bar=document.getElementById('contact-picker-bar');
+  if(bar)bar.style.display=supported?'flex':'none';
+  var btn=document.getElementById('btn-import-contact-ord');
+  if(btn){
+    btn.style.display=supported?'':'none';
+    if(supported)btn.onclick=pickContactForOrden;
+  }
+}
 
 auth.onAuthStateChanged(user=>{
   document.getElementById('login-screen').style.display=user?'none':'flex';
