@@ -308,7 +308,10 @@ function startListeners(){
     const unsub=col(c).onSnapshot(snap=>{
       STATE[key]=snap.docs.map(d=>({id:d.id,...d.data()})).filter(d=>!d.deleted);
       updateBadges();
-      if(STATE.page===({clientes:'clientes',ordenes:'ordenes',gastos:'gastos',catalogo:'catalogo',notas_banco:'notas'}[c]||STATE.page))renderPage(STATE.page);
+      // Re-render current page when relevant data changes
+const pageMap={clientes:'clientes',ordenes:'ordenes',gastos:'gastos',catalogo:'catalogo',notas_banco:'notas'};
+const shouldRender = pageMap[c]===STATE.page || (c==='ordenes' && (STATE.page==='ingresos'||STATE.page==='alertas'||STATE.page==='dashboard'));
+if(shouldRender) renderPage(STATE.page);
     });
     unsubs.push(unsub);
   });
@@ -332,8 +335,17 @@ function showPage(p){
 
 document.querySelectorAll('.nav-item').forEach(el=>el.addEventListener('click',()=>showPage(el.dataset.page)));
 document.addEventListener('click',function(e){
-  const drop=document.getElementById('nombres-sug-drop');
-  if(drop&&!drop.contains(e.target)&&e.target.id!=='mc-nom') drop.style.display='none';
+  // Close nombres suggestions
+  const ndrop=document.getElementById('nombres-sug-drop');
+  if(ndrop&&!ndrop.contains(e.target)&&e.target.id!=='mc-nom') ndrop.style.display='none';
+  // Close mat picker
+  const pdrop=document.getElementById('picker-drop');
+  if(pdrop&&pdrop.innerHTML){
+    const inside=pdrop.contains(e.target);
+    const isMatInput=e.target.id&&e.target.id.startsWith('mat-inp-');
+    const isDropBtn=e.target.closest&&e.target.closest('[onclick*="showPickerFiltered"]');
+    if(!inside&&!isMatInput&&!isDropBtn) pdrop.innerHTML='';
+  }
 });
 
 // ── SIDEBAR TOGGLE ──
@@ -554,23 +566,83 @@ function renderMatRows(){
   const c=document.getElementById('mat-rows');if(!c)return;
   c.innerHTML=tempMats.map((m,i)=>{
     const uOpts=UNIDADES.map(u=>`<option${m.unidad===u?' selected':''}>${u}</option>`).join('');
-    return`<div class="mat-row"><div style="position:relative"><input value="${m.nombre||''}" placeholder="Seleccionar..." oninput="tempMats[${i}].nombre=this.value" style="cursor:pointer" onclick="showPicker(${i})"><button onclick="showPicker(${i})" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px">▼</button></div><input type="number" value="${m.cant||''}" placeholder="0" oninput="tempMats[${i}].cant=this.value;renderMatRows();updatePresup()"><select onchange="tempMats[${i}].unidad=this.value">${uOpts}</select><input type="number" value="${m.precio||''}" placeholder="0" oninput="tempMats[${i}].precio=this.value;renderMatRows();updatePresup()"><span class="mat-sub">${fmt((parseFloat(m.cant)||0)*(parseFloat(m.precio)||0))}</span><button onclick="tempMats.splice(${i},1);renderMatRows();updatePresup()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">✕</button></div>`;
+    return`<div class="mat-row"><div style="position:relative"><input id="mat-inp-${i}" value="${m.nombre||''}" placeholder="Escribe o selecciona..." autocomplete="off"
+      oninput="tempMats[${i}].nombre=this.value;showPickerFiltered(${i},this.value)"
+      onfocus="showPickerFiltered(${i},this.value)"
+      onkeydown="if(event.key==='Escape'){document.getElementById('picker-drop').innerHTML='';}"
+      style="padding-right:24px">
+      <button onclick="showPickerFiltered(${i},document.getElementById('mat-inp-${i}').value)" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px">▼</button>
+    </div>
+    <input type="number" value="${m.cant||''}" placeholder="0" oninput="tempMats[${i}].cant=this.value;updateMatSubtotal(${i})">
+    <select onchange="tempMats[${i}].unidad=this.value">${uOpts}</select>
+    <input type="number" value="${m.precio||''}" placeholder="0" oninput="tempMats[${i}].precio=this.value;updateMatSubtotal(${i})">
+    <span class="mat-sub" id="mat-sub-${i}">${fmt((parseFloat(m.cant)||0)*(parseFloat(m.precio)||0))}</span>
+    <button onclick="tempMats.splice(${i},1);renderMatRows();updatePresup()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">✕</button></div>`;
   }).join('');
+  updatePresup();
+}
+
+function updateMatSubtotal(i){
+  tempMats[i].cant=document.querySelector(`#mat-rows .mat-row:nth-child(${i+1}) input[type=number]:first-of-type`)?.value||tempMats[i].cant;
+  tempMats[i].precio=document.querySelector(`#mat-rows .mat-row:nth-child(${i+1}) input[type=number]:last-of-type`)?.value||tempMats[i].precio;
+  const sub=(parseFloat(tempMats[i].cant)||0)*(parseFloat(tempMats[i].precio)||0);
+  const el=document.getElementById('mat-sub-'+i);if(el)el.textContent=fmt(sub);
   updatePresup();
 }
 function addMat(){tempMats.push({nombre:'',cant:'',unidad:'',precio:''});renderMatRows();}
 
-function showPicker(idx){
+var currentPickerIdx=null;
+
+function showPickerFiltered(idx,q){
+  currentPickerIdx=idx;
   const pd=document.getElementById('picker-drop');if(!pd)return;
-  pd.innerHTML=`<div class="picker-drop"><div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center"><span style="font-weight:500;font-size:13px">Seleccionar material</span><button onclick="document.getElementById('picker-drop').innerHTML=''" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px">×</button></div><div style="padding:6px 10px;border-bottom:1px solid var(--border)"><input id="picker-q" placeholder="Buscar..." oninput="filterPicker(${idx},this.value)" style="font-size:12px"></div><div id="picker-list" style="max-height:160px;overflow-y:auto">${renderPickerList(idx,STATE.catalogo,'')}</div><div style="padding:6px 10px;border-top:1px solid var(--border)"><button class="btn btn-sm" onclick="document.getElementById('picker-drop').innerHTML='';showPage('catalogo')" style="width:100%;justify-content:center">+ Ir al catálogo a crear</button></div></div>`;
-  setTimeout(()=>{const pq=document.getElementById('picker-q');if(pq)pq.focus();},50);
-}
-function renderPickerList(idx,cats,q){
+  const cats=STATE.catalogo;
   const filt=cats.filter(c=>!q||c.nombre.toLowerCase().includes(q.toLowerCase()));
-  if(!filt.length)return'<div style="padding:12px;font-size:12px;color:var(--text3);text-align:center">Sin resultados</div>';
-  return filt.map(c=>`<div class="picker-item" onclick="selMat(${idx},'${c.id}')"><span>${c.nombre}</span><span style="font-size:11px;color:var(--text3)">${c.unidad||''}${c.precio?' · '+fmt(c.precio):''}</span></div>`).join('');
+
+  if(!filt.length && q){
+    // User is typing something not in catalog - just hide picker, allow free type
+    pd.innerHTML='';return;
+  }
+
+  let rows='';
+  if(filt.length){
+    rows=filt.map(c=>`<div class="picker-item" onclick="selMatFromPicker(${idx},'${c.id}')" style="display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:13px">${c.nombre}</div>${c.unidad||c.precio?`<div style="font-size:10px;color:var(--text3)">${c.unidad||''}${c.precio?' · '+fmt(c.precio):''}</div>`:''}
+      </div></div>`).join('');
+  } else {
+    rows='<div style="padding:10px 12px;font-size:12px;color:var(--text3)">Sin materiales en catálogo. <a href="#" onclick="document.getElementById('picker-drop').innerHTML='';showPage('catalogo')" style="color:var(--gold)">Ir al catálogo →</a></div>';
+  }
+
+  pd.innerHTML=`<div class="picker-drop">
+    <div style="padding:7px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em">Catálogo de materiales</span>
+      <button onclick="document.getElementById('picker-drop').innerHTML=''" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1">×</button>
+    </div>
+    <div style="max-height:200px;overflow-y:auto">${rows}</div>
+    <div style="padding:6px 10px;border-top:1px solid var(--border)">
+      <button class="btn btn-sm" onclick="document.getElementById('picker-drop').innerHTML='';showPage('catalogo')" style="width:100%;justify-content:center;font-size:11px">+ Agregar nuevo al catálogo</button>
+    </div>
+  </div>`;
 }
-function filterPicker(idx,q){const pl=document.getElementById('picker-list');if(pl)pl.innerHTML=renderPickerList(idx,STATE.catalogo,q);}
+
+function selMatFromPicker(idx,catId){
+  const cat=STATE.catalogo.find(x=>x.id===catId);if(!cat)return;
+  tempMats[idx]={...tempMats[idx],nombre:cat.nombre};
+  if(cat.unidad) tempMats[idx].unidad=cat.unidad;
+  if(cat.precio) tempMats[idx].precio=String(cat.precio);
+  document.getElementById('picker-drop').innerHTML='';
+  renderMatRows();updatePresup();
+  // Focus cant field after selection
+  setTimeout(()=>{
+    const rows=document.querySelectorAll('#mat-rows .mat-row');
+    if(rows[idx]){const numInp=rows[idx].querySelectorAll('input[type=number]');if(numInp[0])numInp[0].focus();}
+  },50);
+}
+
+// Keep old selMat as alias
+function selMat(idx,catId){ selMatFromPicker(idx,catId); }
+function renderPickerList(idx,cats,q){ return ''; }
+function filterPicker(idx,q){}
 function selMat(idx,catId){
   const cat=STATE.catalogo.find(x=>x.id===catId);if(!cat)return;
   tempMats[idx]={...tempMats[idx],nombre:cat.nombre,unidad:cat.unidad||tempMats[idx].unidad,precio:cat.precio||tempMats[idx].precio};
@@ -604,7 +676,7 @@ async function delOrden(id){if(!confirm('¿Eliminar orden?'))return;await softDe
 function renderIngresos(){
   const mesIng=STATE.mesIng||STATE.mes;
   const allOrds=filterByMonth(STATE.ordenes,mesIng);
-  const ords=allOrds.filter(o=>(o.pagos||[]).length>0);
+  const ords=allOrds.filter(o=>getTotalPagado(o)>0);
   let ef=0,tar=0,tr=0;ords.forEach(o=>(o.pagos||[]).forEach(p=>{if(p.tipo==='efectivo')ef+=p.monto;else if(p.tipo==='tarjeta')tar+=p.monto;else tr+=p.monto;}));
   const selMes=monthOpts().map(o=>`<option value="${o.v}"${o.v===mesIng?' selected':''}>${o.l}</option>`).join('');
   return `
