@@ -331,6 +331,10 @@ function showPage(p){
 }
 
 document.querySelectorAll('.nav-item').forEach(el=>el.addEventListener('click',()=>showPage(el.dataset.page)));
+document.addEventListener('click',function(e){
+  const drop=document.getElementById('nombres-sug-drop');
+  if(drop&&!drop.contains(e.target)&&e.target.id!=='mc-nom') drop.style.display='none';
+});
 
 // ── SIDEBAR TOGGLE ──
 document.getElementById('toggleSidebar').addEventListener('click',()=>{
@@ -598,9 +602,11 @@ async function delOrden(id){if(!confirm('¿Eliminar orden?'))return;await softDe
 
 // ── INGRESOS ──
 function renderIngresos(){
-  const ords=filterByMonth(STATE.ordenes,STATE.mes);
+  const mesIng=STATE.mesIng||STATE.mes;
+  const allOrds=filterByMonth(STATE.ordenes,mesIng);
+  const ords=allOrds.filter(o=>(o.pagos||[]).length>0);
   let ef=0,tar=0,tr=0;ords.forEach(o=>(o.pagos||[]).forEach(p=>{if(p.tipo==='efectivo')ef+=p.monto;else if(p.tipo==='tarjeta')tar+=p.monto;else tr+=p.monto;}));
-  const selMes=monthOpts().map(o=>`<option value="${o.v}"${o.v===STATE.mes?' selected':''}>${o.l}</option>`).join('');
+  const selMes=monthOpts().map(o=>`<option value="${o.v}"${o.v===mesIng?' selected':''}>${o.l}</option>`).join('');
   return `
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
     <div></div><select id="ing-mes" style="width:auto">${selMes}</select>
@@ -617,7 +623,8 @@ function renderIngresos(){
 
 // ── GASTOS ──
 function renderGastos(){
-  const lista=filterByMonth(STATE.gastos,STATE.mes,'fecha').sort((a,b)=>String(b.id).localeCompare(String(a.id)));
+  const mesGas=STATE.mesGas||STATE.mes;
+  const lista=filterByMonth(STATE.gastos,mesGas,'fecha').sort((a,b)=>String(b.id).localeCompare(String(a.id)));
   const total=lista.reduce((s,g)=>s+g.monto,0);
   const mayor=lista.reduce((a,b)=>b.monto>a.monto?b:a,{monto:0,cat:'--'});
   const selMes=monthOpts().map(o=>`<option value="${o.v}"${o.v===STATE.mes?' selected':''}>${o.l}</option>`).join('');
@@ -681,12 +688,73 @@ function openModalCat(id){
   const uOpts=UNIDADES.map(u=>`<option${m.unidad===u?' selected':''}>${u}</option>`).join('');
   showModal(`<div class="modal modal-sm"><div class="modal-header"><span class="modal-title">${id?'Editar material':'Nuevo material'}</span><button class="modal-close" onclick="closeModal()">×</button></div>
   <div class="modal-body"><div class="form-grid">
-    <div class="form-group full"><label class="form-label">Nombre *</label><input id="mc-nom" value="${m.nombre||''}"></div>
+    <div class="form-group full">
+      <label class="form-label">Nombre *</label>
+      <div style="position:relative">
+        <input id="mc-nom" value="${m.nombre||''}" placeholder="Escribe o selecciona..." autocomplete="off" oninput="filterNombresSug(this.value)" onfocus="showNombresSug()">
+        <div id="nombres-sug-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);max-height:180px;overflow-y:auto;z-index:10;box-shadow:0 6px 20px rgba(0,0,0,0.3)"></div>
+      </div>
+      <div style="margin-top:6px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3)">
+        <span>Sugerencias:</span>
+        <button class="btn btn-sm" onclick="openGestionNombres()" style="font-size:10px;padding:2px 8px">✏️ Gestionar</button>
+      </div>
+    </div>
     <div class="form-group"><label class="form-label">Unidad</label><select id="mc-uni"><option value="">Sin unidad</option>${uOpts}</select></div>
     <div class="form-group"><label class="form-label">Precio referencia</label><input type="number" id="mc-pre" value="${m.precio||''}"></div>
   </div></div>
   <div class="modal-footer"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn btn-gold" onclick="saveCat('${id||''}')">Guardar</button></div>
   </div>`);
+  renderNombresSug('');
+}
+
+function getNombresSug(){
+  const saved=localStorage.getItem('tapix_nombres_mat');
+  if(saved) return JSON.parse(saved);
+  const defaults=['Tela de vinilo', 'Tela de tela', 'Espuma #40', 'Espuma #60', 'Espuma #80', 'Colcha de espuma', 'Grapa de aire', 'Grapa manual', 'Pata de madera', 'Pata de metal', 'Nosal', 'Hilo', 'Pegamento', 'Tela impermeable', 'Foam', 'Resorte', 'Cinta de borde', 'Cremallera', 'Relleno de fibra', 'Madera terciada', 'Tornillo', 'Tela mosquitero'];
+  localStorage.setItem('tapix_nombres_mat',JSON.stringify(defaults));
+  return defaults;
+}
+function saveNombresSug(list){ localStorage.setItem('tapix_nombres_mat',JSON.stringify(list)); }
+
+function renderNombresSug(q){
+  const drop=document.getElementById('nombres-sug-drop');if(!drop)return;
+  const list=getNombresSug().filter(n=>!q||n.toLowerCase().includes(q.toLowerCase()));
+  if(!list.length){drop.style.display='none';return;}
+  drop.style.display='block';
+  drop.innerHTML=list.map(n=>`<div onclick="selNombreSug('${n.replace(/'/g,"\'")}');document.getElementById('nombres-sug-drop').style.display='none'" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">${n}</div>`).join('');
+}
+function filterNombresSug(q){ renderNombresSug(q); }
+function showNombresSug(){ renderNombresSug(document.getElementById('mc-nom')?.value||''); }
+function selNombreSug(n){ const inp=document.getElementById('mc-nom');if(inp)inp.value=n; }
+
+function openGestionNombres(){
+  closeModal();
+  const list=getNombresSug();
+  showModal(`<div class="modal modal-sm"><div class="modal-header"><span class="modal-title">Gestionar sugerencias de nombres</span><button class="modal-close" onclick="closeModal();openModalCat(null)">×</button></div>
+  <div class="modal-body">
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Estos nombres aparecerán como sugerencias al agregar materiales al catálogo.</p>
+    <div id="nombres-list">${renderNombresList(list)}</div>
+    <div style="display:flex;gap:7px;margin-top:10px">
+      <input id="nuevo-nombre-sug" placeholder="Nuevo nombre..." style="flex:1">
+      <button class="btn btn-gold" onclick="addNombreSug()">+ Agregar</button>
+    </div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-gold" onclick="closeModal();openModalCat(null)">Listo</button></div>
+  </div>`);
+}
+function renderNombresList(list){
+  return list.map((n,i)=>`<div style="display:flex;align-items:center;gap:7px;background:var(--bg3);border-radius:var(--r);padding:7px 10px;margin-bottom:5px"><span style="flex:1;font-size:13px">${n}</span><button class="btn btn-sm btn-danger" onclick="delNombreSug(${i})">✕</button></div>`).join('');
+}
+function addNombreSug(){
+  const inp=document.getElementById('nuevo-nombre-sug');if(!inp)return;
+  const val=inp.value.trim();if(!val){notify('Escribe un nombre',true);return;}
+  const list=getNombresSug();list.push(val);saveNombresSug(list);
+  inp.value='';document.getElementById('nombres-list').innerHTML=renderNombresList(list);
+  notify('Nombre agregado');
+}
+function delNombreSug(i){
+  const list=getNombresSug();list.splice(i,1);saveNombresSug(list);
+  document.getElementById('nombres-list').innerHTML=renderNombresList(list);
 }
 async function saveCat(id){
   const nom=document.getElementById('mc-nom').value.trim();
@@ -728,8 +796,8 @@ async function toggleNota(id,auto){
 // ── BIND EVENTS ──
 function bindEvents(p){
   if(p==='dashboard'){const ms=document.getElementById('dash-mes');if(ms)ms.addEventListener('change',e=>{STATE.mes=e.target.value;renderPage('dashboard');});}
-  if(p==='ingresos'){const mi=document.getElementById('ing-mes');if(mi)mi.addEventListener('change',e=>{STATE.mes=e.target.value;renderPage('ingresos');});}
-  if(p==='gastos'){const mg=document.getElementById('gas-mes');if(mg)mg.addEventListener('change',e=>{STATE.mes=e.target.value;renderPage('gastos');});}
+  if(p==='ingresos'){const mi=document.getElementById('ing-mes');if(mi)mi.addEventListener('change',e=>{STATE.mesIng=e.target.value;renderPage('ingresos');});}
+  if(p==='gastos'){const mg=document.getElementById('gas-mes');if(mg)mg.addEventListener('change',e=>{STATE.mesGas=e.target.value;renderPage('gastos');});}
 }
 
 // ── AUTH ──
