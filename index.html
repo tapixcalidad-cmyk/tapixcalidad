@@ -242,7 +242,7 @@ textarea{resize:vertical;min-height:65px;}
 <div id="modal-root"></div>
 
 <script>
-// ── FIREBASE CONFIG ──
+// -- FIREBASE CONFIG --
 const firebaseConfig = {
   apiKey: "AIzaSyAaK4vbz1qR9tyfI63XUkllOhSk8OTZIQ4",
   authDomain: "tapixcalidad-54e3f.firebaseapp.com",
@@ -258,7 +258,7 @@ const db = firebase.firestore();
 const TALLER = 'taller_principal';
 const col = n => db.collection('talleres').doc(TALLER).collection(n);
 
-// ── CONSTANTS ──
+// -- CONSTANTS --
 const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const TIPOS=['Tapizado de mueble','Reparación','Fabricación','Abanicería','Carrocería / Carretero','Remodelación','Otro'];
 const ESTADOS=['pendiente','proceso','listo','entregado'];
@@ -274,7 +274,7 @@ const NOTAS_RAPIDAS=[
   'Trabajo sujeto a revisión final antes de entrega.'
 ];
 
-// ── UTILS ──
+// -- UTILS --
 const fmt=n=>'RD$'+Number(n||0).toLocaleString('es-DO');
 const fmtD=d=>{if(!d)return'--';const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];};
 const today=()=>new Date().toISOString().split('T')[0];
@@ -287,21 +287,21 @@ const uid=()=>crypto.randomUUID();
 const monthOpts=()=>{const now=new Date();const r=[];for(let i=0;i<12;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const v=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');r.push({v,l:MESES[d.getMonth()]+' '+d.getFullYear()});}return r;};
 const filterByMonth=(list,mes,field='fechaIn')=>list.filter(x=>{const d=(x[field]||x.fechaReg||'').split('-');const ym=mes.split('-');return d[0]===ym[0]&&d[1]===ym[1];});
 
-// ── STATE ──
+// -- STATE --
 const STATE={clientes:[],ordenes:[],gastos:[],catalogo:[],notasBanco:[],page:'dashboard',mes:curYM(),sidebarOpen:true};
 const unsubs=[];
 
-// ── NOTIFY ──
+// -- NOTIFY --
 function notify(msg,err=false){const n=document.getElementById('notif');n.textContent=msg;n.className='notif'+(err?' err':'');n.classList.add('show');setTimeout(()=>n.classList.remove('show'),2800);}
 
-// ── SYNC INDICATOR ──
+// -- SYNC INDICATOR --
 function setSyncing(v){const dot=document.getElementById('syncDot'),txt=document.getElementById('syncText');if(v){dot.className='sync-dot syncing';txt.textContent='Guardando...';}else{dot.className='sync-dot';txt.textContent='Sincronizado';}}
 
-// ── FIRESTORE OPERATIONS ──
+// -- FIRESTORE OPERATIONS --
 async function saveDoc(colName,data){setSyncing(true);try{await col(colName).doc(data.id).set({...data,updatedAt:Date.now()},{merge:true});}catch(e){notify('Error al guardar',true);}setSyncing(false);}
 async function softDel(colName,id){setSyncing(true);try{await col(colName).doc(id).update({deleted:true,updatedAt:Date.now()});}catch(e){notify('Error al eliminar',true);}setSyncing(false);}
 
-// ── REALTIME LISTENERS ──
+// -- REALTIME LISTENERS --
 function startListeners(){
   ['clientes','ordenes','gastos','catalogo','notas_banco'].forEach((c,i)=>{
     const key=['clientes','ordenes','gastos','catalogo','notasBanco'][i];
@@ -324,7 +324,7 @@ function updateBadges(){
   const ba=document.getElementById('nb-alert');ba.textContent=al.length;ba.style.display=al.length?'':'none';
 }
 
-// ── NAV ──
+// -- NAV --
 function showPage(p){
   STATE.page=p;
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.page===p));
@@ -348,18 +348,18 @@ document.addEventListener('click',function(e){
   }
 });
 
-// ── SIDEBAR TOGGLE ──
+// -- SIDEBAR TOGGLE --
 document.getElementById('toggleSidebar').addEventListener('click',()=>{
   STATE.sidebarOpen=!STATE.sidebarOpen;
   document.getElementById('sidebar').classList.toggle('collapsed',!STATE.sidebarOpen);
   document.getElementById('main').classList.toggle('collapsed',!STATE.sidebarOpen);
 });
 
-// ── MODAL ──
+// -- MODAL --
 function showModal(html){const r=document.getElementById('modal-root');r.innerHTML='<div class="overlay open" id="ov">'+html+'</div>';document.getElementById('ov').addEventListener('click',e=>{if(e.target.id==='ov')closeModal();});}
 function closeModal(){document.getElementById('modal-root').innerHTML='';}
 
-// ── RENDER PAGE ──
+// -- RENDER PAGE --
 function renderPage(p){
   const c=document.getElementById('page-content');
   if(p==='dashboard')c.innerHTML=renderDashboard();
@@ -373,7 +373,7 @@ function renderPage(p){
   bindEvents(p);
 }
 
-// ── DASHBOARD ──
+// -- DASHBOARD --
 function renderDashboard(){
   const ordsM=filterByMonth(STATE.ordenes,STATE.mes);
   const gastsM=filterByMonth(STATE.gastos,STATE.mes,'fecha');
@@ -409,7 +409,7 @@ function renderDashboard(){
 
 function estadoBadge(e){const m={pendiente:'badge-amber',proceso:'badge-blue',listo:'badge-green',entregado:'badge-gray'};const l={pendiente:'Pendiente',proceso:'En proceso',listo:'Listo',entregado:'Entregado'};return`<span class="badge ${m[e]||'badge-gray'}">${l[e]||e}</span>`;}
 
-// ── CLIENTES ──
+// -- CLIENTES --
 function renderClientes(){
   const q=(STATE._qCli||'').toLowerCase();
   const lista=STATE.clientes.filter(c=>!q||c.nombre.toLowerCase().includes(q)||(c.tel||'').includes(q));
@@ -467,7 +467,7 @@ function openDetalleCliente(id){
   </div>`);
 }
 
-// ── ORDENES ──
+// -- ORDENES --
 var tempMats=[],tempPagos=[];
 function renderOrdenes(){
   const q=(STATE._qOrd||'').toLowerCase();
@@ -563,22 +563,34 @@ function updatePresup(){
 }
 
 function renderMatRows(){
-  const c=document.getElementById('mat-rows');if(!c)return;
-  c.innerHTML=tempMats.map((m,i)=>{
-    const uOpts=UNIDADES.map(u=>`<option${m.unidad===u?' selected':''}>${u}</option>`).join('');
-    return`<div class="mat-row"><div style="position:relative"><input id="mat-inp-${i}" value="${m.nombre||''}" placeholder="Escribe o selecciona..." autocomplete="off"
-      oninput="tempMats[${i}].nombre=this.value;showPickerFiltered(${i},this.value)"
-      onfocus="showPickerFiltered(${i},this.value)"
-      onkeydown="if(event.key==='Escape'){document.getElementById('picker-drop').innerHTML='';}"
-      style="padding-right:24px">
-      <button onclick="showPickerFiltered(${i},document.getElementById('mat-inp-${i}').value)" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px">▼</button>
-    </div>
-    <input type="number" value="${m.cant||''}" placeholder="0" oninput="tempMats[${i}].cant=this.value;updateMatSubtotal(${i})">
-    <select onchange="tempMats[${i}].unidad=this.value">${uOpts}</select>
-    <input type="number" value="${m.precio||''}" placeholder="0" oninput="tempMats[${i}].precio=this.value;updateMatSubtotal(${i})">
-    <span class="mat-sub" id="mat-sub-${i}">${fmt((parseFloat(m.cant)||0)*(parseFloat(m.precio)||0))}</span>
-    <button onclick="tempMats.splice(${i},1);renderMatRows();updatePresup()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">✕</button></div>`;
-  }).join('');
+  var c=document.getElementById('mat-rows');if(!c)return;
+  c.innerHTML='';
+  tempMats.forEach(function(m,i){
+    var uOpts=UNIDADES.map(function(u){return'<option'+(m.unidad===u?' selected':'')+'>'+u+'</option>';}).join('');
+    var sub=fmt((parseFloat(m.cant)||0)*(parseFloat(m.precio)||0));
+    var row=document.createElement('div');
+    row.className='mat-row';
+    row.innerHTML='<div style="position:relative">'
+      +'<input id="mat-inp-'+i+'" value="'+(m.nombre||'')+'" placeholder="Escribe o selecciona..." autocomplete="off" style="padding-right:24px">'
+      +'<button data-picker-idx="'+i+'" class="mat-picker-btn" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px">&#9660;</button>'
+      +'</div>'
+      +'<input type="number" value="'+(m.cant||'')+'" placeholder="0" data-mat-cant="'+i+'">'
+      +'<select data-mat-uni="'+i+'">'+uOpts+'</select>'
+      +'<input type="number" value="'+(m.precio||'')+'" placeholder="0" data-mat-pre="'+i+'">'
+      +'<span class="mat-sub" id="mat-sub-'+i+'">'+sub+'</span>'
+      +'<button data-mat-del="'+i+'" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">&#10005;</button>';
+    // Bind events
+    var inp=row.querySelector('#mat-inp-'+i);
+    inp.addEventListener('input',function(){tempMats[i].nombre=this.value;showPickerFiltered(i,this.value);});
+    inp.addEventListener('focus',function(){showPickerFiltered(i,this.value);});
+    inp.addEventListener('keydown',function(e){if(e.key==='Escape'){var pd=document.getElementById('picker-drop');if(pd)pd.innerHTML='';}});
+    row.querySelector('.mat-picker-btn').addEventListener('click',function(){showPickerFiltered(i,inp.value);});
+    row.querySelector('[data-mat-cant]').addEventListener('input',function(){tempMats[i].cant=this.value;var s=(parseFloat(tempMats[i].cant)||0)*(parseFloat(tempMats[i].precio)||0);var el=document.getElementById('mat-sub-'+i);if(el)el.textContent=fmt(s);updatePresup();});
+    row.querySelector('[data-mat-uni]').addEventListener('change',function(){tempMats[i].unidad=this.value;});
+    row.querySelector('[data-mat-pre]').addEventListener('input',function(){tempMats[i].precio=this.value;var s=(parseFloat(tempMats[i].cant)||0)*(parseFloat(tempMats[i].precio)||0);var el=document.getElementById('mat-sub-'+i);if(el)el.textContent=fmt(s);updatePresup();});
+    row.querySelector('[data-mat-del]').addEventListener('click',function(){tempMats.splice(i,1);renderMatRows();updatePresup();});
+    c.appendChild(row);
+  });
   updatePresup();
 }
 
@@ -594,37 +606,38 @@ function addMat(){tempMats.push({nombre:'',cant:'',unidad:'',precio:''});renderM
 var currentPickerIdx=null;
 
 function showPickerFiltered(idx,q){
-  currentPickerIdx=idx;
-  const pd=document.getElementById('picker-drop');if(!pd)return;
-  const cats=STATE.catalogo;
-  const filt=cats.filter(c=>!q||c.nombre.toLowerCase().includes(q.toLowerCase()));
-
-  if(!filt.length && q){
-    // User is typing something not in catalog - just hide picker, allow free type
-    pd.innerHTML='';return;
-  }
-
-  let rows='';
+  var pd=document.getElementById('picker-drop');if(!pd)return;
+  var filt=(STATE.catalogo||[]).filter(function(c){return !q||c.nombre.toLowerCase().includes(q.toLowerCase());});
+  if(!filt.length&&q){pd.innerHTML='';return;}
+  var rows='';
   if(filt.length){
-    rows=filt.map(c=>`<div class="picker-item" onclick="selMatFromPicker(${idx},'${c.id}')" style="display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-size:13px">${c.nombre}</div>${c.unidad||c.precio?`<div style="font-size:10px;color:var(--text3)">${c.unidad||''}${c.precio?' · '+fmt(c.precio):''}</div>`:''}
-      </div></div>`).join('');
+    filt.forEach(function(c){
+      var sub='';
+      if(c.unidad||c.precio) sub='<div style="font-size:10px;color:#6a6862">'+(c.unidad||'')+(c.precio?' · RD$'+Number(c.precio).toLocaleString('es-DO'):'')+'</div>';
+      rows+='<div class="picker-item" data-catid="'+c.id+'" style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px">'+c.nombre+'</div>'+sub+'</div></div>';
+    });
   } else {
-    rows='<div style="padding:10px 12px;font-size:12px;color:var(--text3)">Sin materiales en catálogo. <a href="#" onclick="document.getElementById('picker-drop').innerHTML='';showPage('catalogo')" style="color:var(--gold)">Ir al catálogo →</a></div>';
+    rows='<div style="padding:10px 12px;font-size:12px;color:#6a6862">No hay materiales en el catalogo.</div>';
   }
-
-  pd.innerHTML=`<div class="picker-drop">
-    <div style="padding:7px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.07em">Catálogo de materiales</span>
-      <button onclick="document.getElementById('picker-drop').innerHTML=''" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;line-height:1">×</button>
-    </div>
-    <div style="max-height:200px;overflow-y:auto">${rows}</div>
-    <div style="padding:6px 10px;border-top:1px solid var(--border)">
-      <button class="btn btn-sm" onclick="document.getElementById('picker-drop').innerHTML='';showPage('catalogo')" style="width:100%;justify-content:center;font-size:11px">+ Agregar nuevo al catálogo</button>
-    </div>
-  </div>`;
+  pd.innerHTML='<div class="picker-drop">'
+    +'<div style="padding:7px 12px;border-bottom:1px solid #3a3935;display:flex;justify-content:space-between;align-items:center">'
+    +'<span style="font-size:11px;font-weight:500;color:#9e9b93;text-transform:uppercase;letter-spacing:0.07em">Catalogo</span>'
+    +'<button id="btn-close-picker" style="background:none;border:none;color:#6a6862;cursor:pointer;font-size:16px;line-height:1">x</button>'
+    +'</div>'
+    +'<div style="max-height:200px;overflow-y:auto" id="picker-items">'+rows+'</div>'
+    +'<div style="padding:6px 10px;border-top:1px solid #3a3935">'
+    +'<button id="btn-picker-go-cat" class="btn btn-sm" style="width:100%;justify-content:center;font-size:11px">+ Agregar nuevo al catalogo</button>'
+    +'</div></div>';
+  var closeBtn=pd.querySelector('#btn-close-picker');
+  if(closeBtn) closeBtn.addEventListener('click',function(){pd.innerHTML='';});
+  var goBtn=pd.querySelector('#btn-picker-go-cat');
+  if(goBtn) goBtn.addEventListener('click',function(){pd.innerHTML='';showPage('catalogo');});
+  pd.querySelectorAll('.picker-item').forEach(function(el){
+    el.addEventListener('mouseenter',function(){el.style.background='#252420';});
+    el.addEventListener('mouseleave',function(){el.style.background='';});
+    el.addEventListener('click',function(){selMatFromPicker(idx,el.dataset.catid);});
+  });
 }
-
 function selMatFromPicker(idx,catId){
   const cat=STATE.catalogo.find(x=>x.id===catId);if(!cat)return;
   tempMats[idx]={...tempMats[idx],nombre:cat.nombre};
@@ -672,7 +685,7 @@ async function saveOrden(id){
 }
 async function delOrden(id){if(!confirm('¿Eliminar orden?'))return;await softDel('ordenes',id);notify('Orden eliminada');}
 
-// ── INGRESOS ──
+// -- INGRESOS --
 function renderIngresos(){
   const mesIng=STATE.mesIng||STATE.mes;
   const allOrds=filterByMonth(STATE.ordenes,mesIng);
@@ -693,7 +706,7 @@ function renderIngresos(){
   </tbody></table></div></div>`;
 }
 
-// ── GASTOS ──
+// -- GASTOS --
 function renderGastos(){
   const mesGas=STATE.mesGas||STATE.mes;
   const lista=filterByMonth(STATE.gastos,mesGas,'fecha').sort((a,b)=>String(b.id).localeCompare(String(a.id)));
@@ -735,7 +748,7 @@ async function saveGasto(id){
 }
 async function delGasto(id){if(!confirm('¿Eliminar?'))return;await softDel('gastos',id);notify('Eliminado');}
 
-// ── ALERTAS ──
+// -- ALERTAS --
 function renderAlertas(){
   const alertas=STATE.ordenes.filter(o=>{const s=(o.mo+o.mat+o.acarreo)-getTotalPagado(o);return s>0&&daysDiff(o.fechaIn)>7&&o.estado!=='entregado';}).sort((a,b)=>daysDiff(b.fechaIn)-daysDiff(a.fechaIn));
   if(!alertas.length)return`<div class="empty"><div class="empty-icon">✅</div><div class="empty-title">Todo al día</div><p>Sin cobros pendientes mayores a 7 días</p></div>`;
@@ -746,7 +759,7 @@ function renderAlertas(){
   </tbody></table></div></div>`;
 }
 
-// ── CATALOGO ──
+// -- CATALOGO --
 function renderCatalogo(){
   return `
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div></div><button class="btn btn-gold" onclick="openModalCat(null)">+ Nuevo material</button></div>
@@ -836,7 +849,7 @@ async function saveCat(id){
 }
 async function delCat(id){if(!confirm('¿Eliminar?'))return;await softDel('catalogo',id);notify('Eliminado');}
 
-// ── NOTAS BANCO ──
+// -- NOTAS BANCO --
 function renderNotas(){
   return `
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div></div><button class="btn btn-gold" onclick="openModalNota(null)">+ Nueva nota</button></div>
@@ -865,14 +878,14 @@ async function toggleNota(id,auto){
   await saveDoc('notas_banco',{...n,auto});
 }
 
-// ── BIND EVENTS ──
+// -- BIND EVENTS --
 function bindEvents(p){
   if(p==='dashboard'){const ms=document.getElementById('dash-mes');if(ms)ms.addEventListener('change',e=>{STATE.mes=e.target.value;renderPage('dashboard');});}
   if(p==='ingresos'){const mi=document.getElementById('ing-mes');if(mi)mi.addEventListener('change',e=>{STATE.mesIng=e.target.value;renderPage('ingresos');});}
   if(p==='gastos'){const mg=document.getElementById('gas-mes');if(mg)mg.addEventListener('change',e=>{STATE.mesGas=e.target.value;renderPage('gastos');});}
 }
 
-// ── AUTH ──
+// -- AUTH --
 document.getElementById('btnGoogle').addEventListener('click',()=>{
   auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e=>notify('Error al iniciar sesión: '+e.message,true));
 });
