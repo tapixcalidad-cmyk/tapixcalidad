@@ -501,8 +501,32 @@ function renderOrdenes(){
 function openModalOrden(id,clienteId){
   const o=id?STATE.ordenes.find(x=>x.id===id):null;
   const autoNotas=STATE.notasBanco.filter(n=>n.auto).map(n=>n.texto).join('\n');
-  tempMats=o?JSON.parse(JSON.stringify(o.materiales||[])):[];
-  tempPagos=o?JSON.parse(JSON.stringify(o.pagos||[])):[];
+  // Load materiales and pagos safely
+  tempMats=[];
+  tempPagos=[];
+  if(o){
+    try{
+      var rawMats=o.materiales||o.Materiales||[];
+      if(Array.isArray(rawMats)){
+        tempMats=rawMats.map(function(m){
+          return{
+            nombre:m.nombre||m.Nombre||'',
+            cant:m.cant!=null?m.cant:m.cantidad||0,
+            unidad:m.unidad||m.Unidad||'',
+            precio:m.precio!=null?m.precio:m.Precio||0
+          };
+        }).filter(function(m){return m.nombre;});
+      }
+    }catch(e){tempMats=[];}
+    try{
+      var rawPagos=o.pagos||o.Pagos||[];
+      if(Array.isArray(rawPagos)){
+        tempPagos=rawPagos.map(function(p){
+          return{tipo:p.tipo||'efectivo',monto:parseFloat(p.monto)||0};
+        }).filter(function(p){return p.monto>0;});
+      }
+    }catch(e){tempPagos=[];}
+  }
   const selCli=o?o.clienteId:(clienteId||'');
   const cliOpts=`<option value="">Seleccionar...</option><option value="anonimo"${selCli==='anonimo'?' selected':''}>👤 Anónimo</option>`+STATE.clientes.map(c=>`<option value="${c.id}"${c.id===selCli?' selected':''}>${c.nombre}</option>`).join('');
   const tipoOpts=TIPOS.map(t=>`<option${o&&o.tipo===t?' selected':''}>${t}</option>`).join('');
