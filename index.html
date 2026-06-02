@@ -312,7 +312,15 @@ function notify(msg,err=false){const n=document.getElementById('notif');n.textCo
 function setSyncing(v){const dot=document.getElementById('syncDot'),txt=document.getElementById('syncText');if(v){dot.className='sync-dot syncing';txt.textContent='Guardando...';}else{dot.className='sync-dot';txt.textContent='Sincronizado';}}
 
 // -- FIRESTORE OPERATIONS --
-async function saveDoc(colName,data){setSyncing(true);try{await col(colName).doc(data.id).set({...data,updatedAt:Date.now()},{merge:true});}catch(e){notify('Error al guardar',true);}setSyncing(false);}
+async function saveDoc(colName,data){
+  setSyncing(true);
+  try{
+    // Use merge only for non-orden collections; replace entirely for ordenes
+    var opts=colName==='ordenes'?{}:{merge:true};
+    await col(colName).doc(data.id).set({...data,updatedAt:Date.now()},opts);
+  }catch(e){notify('Error al guardar',true);}
+  setSyncing(false);
+}
 async function softDel(colName,id){setSyncing(true);try{await col(colName).doc(id).update({deleted:true,updatedAt:Date.now()});}catch(e){notify('Error al eliminar',true);}setSyncing(false);}
 
 // -- REALTIME LISTENERS --
