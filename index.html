@@ -627,7 +627,7 @@ function renderMatRows(){
     var row=document.createElement('div');
     row.className='mat-row';
     row.innerHTML='<div style="position:relative">'
-      +'<input id="mat-inp-'+i+'" value="'+(m.nombre||'')+'" placeholder="Escribe o selecciona..." autocomplete="off" style="padding-right:24px">'
+      +'<input id="mat-inp-'+i+'" data-mat-nombre="1" value="'+(m.nombre||'')+'" placeholder="Escribe o selecciona..." autocomplete="off" style="padding-right:24px">'
       +'<button data-picker-idx="'+i+'" class="mat-picker-btn" style="position:absolute;right:5px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px">&#9660;</button>'
       +'</div>'
       +'<input type="number" value="'+(m.cant!=null&&m.cant!==''?m.cant:'')+'" placeholder="0" data-mat-cant="'+i+'">'
@@ -744,15 +744,73 @@ function tryAddPago(){
 }
 
 async function saveOrden(id){
-  const cv=document.getElementById('o-cli').value;
-  const desc=document.getElementById('o-desc').value.trim();
+  var cv=document.getElementById('o-cli').value;
+  var desc=(document.getElementById('o-desc').value||'').trim();
   if(!cv){notify('Selecciona un cliente',true);return;}
-  if(!desc){notify('La descripción es obligatoria',true);return;}
-  const mo=parseFloat(document.getElementById('o-mo').value)||0;
-  const mat=matTotalCalc();const ac=parseFloat(document.getElementById('o-acarreo').value)||0;
-  const obj={id:id||uid(),clienteId:cv,desc,tipo:document.getElementById('o-tipo').value,estado:document.getElementById('o-est').value,prioridad:document.getElementById('o-pri').value,fechaIn:document.getElementById('o-fin').value,fechaOut:document.getElementById('o-fout').value,mo,mat,acarreo:ac,notas:document.getElementById('o-notas').value,pagos:JSON.stringify(tempPagos.filter(function(p){return parseFloat(p.monto)>0;}).map(function(p){return{tipo:p.tipo,monto:parseFloat(p.monto)||0};})),materiales:JSON.stringify(tempMats.filter(function(m){return m.nombre;}).map(function(m){return{nombre:m.nombre,cant:parseFloat(m.cant)||0,unidad:m.unidad||'',precio:parseFloat(m.precio)||0};})),fechaReg:STATE.ordenes.find(x=>x.id===id)?.fechaReg||today()};
-  await saveDoc('ordenes',obj);closeModal();notify('Orden guardada');
+  if(!desc){notify('La descripcion es obligatoria',true);return;}
+  var mo=parseFloat(document.getElementById('o-mo').value)||0;
+  var ac=parseFloat(document.getElementById('o-acarreo').value)||0;
+
+  // Read materiales DIRECTLY from DOM
+  var materiales=[];
+  var matRows=document.querySelectorAll('#mat-rows .mat-row');
+  matRows.forEach(function(row){
+    var nInp=row.querySelector('input[id^="mat-inp-"]');
+    var cInp=row.querySelector('[data-mat-cant]');
+    var uSel=row.querySelector('[data-mat-uni]');
+    var pInp=row.querySelector('[data-mat-pre]');
+    var nombre=nInp?nInp.value.trim():'';
+    if(nombre){
+      materiales.push({
+        nombre:nombre,
+        cant:parseFloat(cInp?cInp.value:0)||0,
+        unidad:uSel?uSel.value:'',
+        precio:parseFloat(pInp?pInp.value:0)||0
+      });
+    }
+  });
+
+  // Read pagos DIRECTLY from DOM
+  var pagos=[];
+  var pagoRows=document.querySelectorAll('#pago-rows .pago-row');
+  pagoRows.forEach(function(row){
+    var tSel=row.querySelector('select');
+    var mInp=row.querySelector('input[type=number]');
+    var monto=parseFloat(mInp?mInp.value:0)||0;
+    if(monto>0){
+      pagos.push({tipo:tSel?tSel.value:'efectivo',monto:monto});
+    }
+  });
+
+  var mat=materiales.reduce(function(s,m){return s+(m.cant*m.precio);},0);
+  var total=mo+mat+ac;
+
+  var obj={
+    id:id||uid(),
+    clienteId:cv,
+    desc:desc,
+    tipo:document.getElementById('o-tipo').value,
+    estado:document.getElementById('o-est').value,
+    prioridad:document.getElementById('o-pri').value,
+    fechaIn:document.getElementById('o-fin').value,
+    fechaOut:document.getElementById('o-fout').value,
+    mo:mo,
+    mat:mat,
+    acarreo:ac,
+    notas:document.getElementById('o-notas').value||'',
+    pagos:pagos,
+    materiales:materiales,
+    fechaReg:STATE.ordenes.find(function(x){return x.id===id;})?STATE.ordenes.find(function(x){return x.id===id;}).fechaReg:today()
+  };
+
+  console.log('SAVING materiales:', JSON.stringify(materiales));
+  console.log('SAVING pagos:', JSON.stringify(pagos));
+
+  await saveDoc('ordenes',obj);
+  closeModal();
+  notify('Orden guardada');
 }
+
 async function delOrden(id){if(!confirm('¿Eliminar orden?'))return;await softDel('ordenes',id);notify('Orden eliminada');}
 
 // -- INGRESOS --
