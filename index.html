@@ -505,33 +505,23 @@ function openModalOrden(id,clienteId){
   // Load materiales and pagos safely
   tempMats=[];
   tempPagos=[];
-  console.log('LOADING - o.materiales type:', typeof o?.materiales, 'isArray:', Array.isArray(o?.materiales), 'value:', JSON.stringify(o?.materiales));
   if(o){
     try{
-      var rawMats=o.materiales||o.Materiales||[];
+      var rawMats=o.materiales;
+      if(typeof rawMats==='string'&&rawMats){rawMats=JSON.parse(rawMats);}
       if(Array.isArray(rawMats)){
         tempMats=rawMats.map(function(m){
-          return{
-            nombre:m.nombre||m.Nombre||'',
-            cant:m.cant!=null?m.cant:m.cantidad||0,
-            unidad:m.unidad||m.Unidad||'',
-            precio:m.precio!=null?m.precio:m.Precio||0
-          };
+          return{nombre:String(m.nombre||''),cant:parseFloat(m.cant)||0,unidad:String(m.unidad||''),precio:parseFloat(m.precio)||0};
         }).filter(function(m){return m.nombre;});
       }
-    }catch(e){console.log('MATS ERROR:',e);tempMats=[];}
-    console.log('tempMats after load:', JSON.stringify(tempMats));
+    }catch(e){console.error('mat load err',e);tempMats=[];}
     try{
-      var rawPagos=o.pagos||o.Pagos||[];
+      var rawPagos=o.pagos;
+      if(typeof rawPagos==='string'&&rawPagos){rawPagos=JSON.parse(rawPagos);}
       if(Array.isArray(rawPagos)){
-        tempPagos=rawPagos.map(function(p){
-          return{tipo:p.tipo||'efectivo',monto:parseFloat(p.monto)||0};
-        }).filter(function(p){return p.monto>0;});
+        tempPagos=rawPagos.map(function(p){return{tipo:String(p.tipo||'efectivo'),monto:parseFloat(p.monto)||0};}).filter(function(p){return p.monto>0;});
       }
-    }catch(e){tempPagos=[];}
-    console.log('DEBUG orden:',JSON.stringify(o));
-    console.log('DEBUG tempMats:',JSON.stringify(tempMats));
-    console.log('DEBUG tempPagos:',JSON.stringify(tempPagos));
+    }catch(e){console.error('pago load err',e);tempPagos=[];}
   }
   const selCli=o?o.clienteId:(clienteId||'');
   const cliOpts=`<option value="">Seleccionar...</option><option value="anonimo"${selCli==='anonimo'?' selected':''}>👤 Anónimo</option>`+STATE.clientes.map(c=>`<option value="${c.id}"${c.id===selCli?' selected':''}>${c.nombre}</option>`).join('');
@@ -738,7 +728,7 @@ async function saveOrden(id){
   if(!desc){notify('La descripción es obligatoria',true);return;}
   const mo=parseFloat(document.getElementById('o-mo').value)||0;
   const mat=matTotalCalc();const ac=parseFloat(document.getElementById('o-acarreo').value)||0;
-  const obj={id:id||uid(),clienteId:cv,desc,tipo:document.getElementById('o-tipo').value,estado:document.getElementById('o-est').value,prioridad:document.getElementById('o-pri').value,fechaIn:document.getElementById('o-fin').value,fechaOut:document.getElementById('o-fout').value,mo,mat,acarreo:ac,notas:document.getElementById('o-notas').value,pagos:tempPagos.filter(function(p){return parseFloat(p.monto)>0;}).map(function(p){return{tipo:p.tipo,monto:parseFloat(p.monto)||0};}),materiales:tempMats.filter(function(m){return m.nombre;}).map(function(m){return{nombre:m.nombre,cant:parseFloat(m.cant)||0,unidad:m.unidad||'',precio:parseFloat(m.precio)||0};}),fechaReg:STATE.ordenes.find(x=>x.id===id)?.fechaReg||today()};
+  const obj={id:id||uid(),clienteId:cv,desc,tipo:document.getElementById('o-tipo').value,estado:document.getElementById('o-est').value,prioridad:document.getElementById('o-pri').value,fechaIn:document.getElementById('o-fin').value,fechaOut:document.getElementById('o-fout').value,mo,mat,acarreo:ac,notas:document.getElementById('o-notas').value,pagos:JSON.stringify(tempPagos.filter(function(p){return parseFloat(p.monto)>0;}).map(function(p){return{tipo:p.tipo,monto:parseFloat(p.monto)||0};})),materiales:JSON.stringify(tempMats.filter(function(m){return m.nombre;}).map(function(m){return{nombre:m.nombre,cant:parseFloat(m.cant)||0,unidad:m.unidad||'',precio:parseFloat(m.precio)||0};})),fechaReg:STATE.ordenes.find(x=>x.id===id)?.fechaReg||today()};
   await saveDoc('ordenes',obj);closeModal();notify('Orden guardada');
 }
 async function delOrden(id){if(!confirm('¿Eliminar orden?'))return;await softDel('ordenes',id);notify('Orden eliminada');}
