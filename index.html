@@ -282,8 +282,21 @@ const today=()=>new Date().toISOString().split('T')[0];
 const curYM=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');};
 const daysDiff=d=>{if(!d)return 0;return Math.floor((new Date()-new Date(d))/864e5);};
 const initials=n=>n.trim().split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('');
-const getTotalPagado=o=>(o.pagos||[]).reduce((s,p)=>s+(parseFloat(p.monto)||0),0);
-const getClienteNombre=(o)=>o.clienteId==='anonimo'?'Anónimo':(STATE.clientes.find(c=>c.id===o.clienteId)?.nombre||'--');
+function getTotalPagado(o){
+  try{
+    var pagos=o.pagos||[];
+    if(typeof pagos==='string') pagos=JSON.parse(pagos)||[];
+    if(!Array.isArray(pagos)) pagos=[];
+    return pagos.reduce(function(s,p){return s+(parseFloat(p.monto)||0);},0);
+  }catch(e){return 0;}
+}
+function getPagos(o){
+  try{var p=o.pagos||[];if(typeof p==='string')p=JSON.parse(p)||[];return Array.isArray(p)?p:[];}catch(e){return[];}
+}
+function getMateriales(o){
+  try{var m=o.materiales||[];if(typeof m==='string')m=JSON.parse(m)||[];return Array.isArray(m)?m:[];}catch(e){return[];}
+}
+function getClienteNombre(o){if(o.clienteId==='anonimo')return'Anónimo';var c=STATE.clientes.find(function(x){return x.id===o.clienteId;});return c?c.nombre:'--';}
 const uid=()=>crypto.randomUUID();
 const monthOpts=()=>{const now=new Date();const r=[];for(let i=0;i<12;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const v=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');r.push({v,l:MESES[d.getMonth()]+' '+d.getFullYear()});}return r;};
 const filterByMonth=(list,mes,field='fechaIn')=>list.filter(x=>{const d=(x[field]||x.fechaReg||'').split('-');const ym=mes.split('-');return d[0]===ym[0]&&d[1]===ym[1];});
@@ -739,7 +752,7 @@ function renderIngresos(){
   const mesIng=STATE.mesIng||STATE.mes;
   const allOrds=filterByMonth(STATE.ordenes,mesIng);
   const ords=allOrds.filter(o=>getTotalPagado(o)>0);
-  let ef=0,tar=0,tr=0;ords.forEach(o=>(o.pagos||[]).forEach(p=>{if(p.tipo==='efectivo')ef+=p.monto;else if(p.tipo==='tarjeta')tar+=p.monto;else tr+=p.monto;}));
+  let ef=0,tar=0,tr=0;ords.forEach(o=>getPagos(o).forEach(p=>{if(p.tipo==='efectivo')ef+=p.monto;else if(p.tipo==='tarjeta')tar+=p.monto;else tr+=p.monto;}));
   const selMes=monthOpts().map(o=>`<option value="${o.v}"${o.v===mesIng?' selected':''}>${o.l}</option>`).join('');
   return `
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
@@ -751,7 +764,7 @@ function renderIngresos(){
     <div class="metric"><div class="metric-label">Tarjeta / Transfer.</div><div class="metric-val" style="color:var(--blue)">${fmt(tar+tr)}</div></div>
   </div>
   <div class="card"><div class="table-wrap"><table><thead><tr><th>Fecha</th><th>#</th><th>Cliente</th><th>Efectivo</th><th>Tarjeta</th><th>Transfer.</th><th>Total</th><th>Saldo</th></tr></thead><tbody>
-  ${ords.length?ords.map(o=>{let oef=0,otar=0,otr=0;(o.pagos||[]).forEach(p=>{if(p.tipo==='efectivo')oef+=p.monto;else if(p.tipo==='tarjeta')otar+=p.monto;else otr+=p.monto;});const pagado=oef+otar+otr,total=o.mo+o.mat+o.acarreo,saldo=total-pagado;return`<tr><td style="font-size:11px;color:var(--text3)">${fmtD(o.fechaIn||o.fechaReg)}</td><td style="font-size:11px;color:var(--text3)">${o.id.slice(-5)}</td><td>${getClienteNombre(o)}</td><td>${oef>0?fmt(oef):'--'}</td><td>${otar>0?fmt(otar):'--'}</td><td>${otr>0?fmt(otr):'--'}</td><td style="color:var(--gold);font-weight:500">${fmt(pagado)}</td><td style="color:${saldo>0?'var(--red)':'var(--green)'}">${saldo>0?fmt(saldo):'Saldado'}</td></tr>`;}).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:30px">Sin ingresos en este período</td></tr>'}
+  ${ords.length?ords.map(o=>{let oef=0,otar=0,otr=0;getPagos(o).forEach(p=>{if(p.tipo==='efectivo')oef+=p.monto;else if(p.tipo==='tarjeta')otar+=p.monto;else otr+=p.monto;});const pagado=oef+otar+otr,total=o.mo+o.mat+o.acarreo,saldo=total-pagado;return`<tr><td style="font-size:11px;color:var(--text3)">${fmtD(o.fechaIn||o.fechaReg)}</td><td style="font-size:11px;color:var(--text3)">${o.id.slice(-5)}</td><td>${getClienteNombre(o)}</td><td>${oef>0?fmt(oef):'--'}</td><td>${otar>0?fmt(otar):'--'}</td><td>${otr>0?fmt(otr):'--'}</td><td style="color:var(--gold);font-weight:500">${fmt(pagado)}</td><td style="color:${saldo>0?'var(--red)':'var(--green)'}">${saldo>0?fmt(saldo):'Saldado'}</td></tr>`;}).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:30px">Sin ingresos en este período</td></tr>'}
   </tbody></table></div></div>`;
 }
 
@@ -954,14 +967,14 @@ function imprimirFactura(id){
 
   // Pagos
   var pagosHTML="";
-  (o.pagos||[]).forEach(function(p){
+  getPagos(o).forEach(function(p){
     pagosHTML+="<tr><td style='padding:5px 0;border-bottom:1px solid #f0e8d8'>"+p.tipo.charAt(0).toUpperCase()+p.tipo.slice(1)+"</td>"
       +"<td style='padding:5px 0;border-bottom:1px solid #f0e8d8;text-align:right'>RD$"+Number(p.monto).toLocaleString("es-DO")+"</td></tr>";
   });
 
   // Materiales
   var matsHTML="";
-  if((o.materiales||[]).length){
+  if(getMateriales(o).length){
     matsHTML+="<p style='font-size:11px;color:#8B6914;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;font-family:Arial'>Materiales utilizados</p>";
     matsHTML+="<table style='width:100%;border-collapse:collapse;font-size:12px'>"
       +"<tr style='border-bottom:2px solid #e8c97a'><td style='padding:4px 0;font-weight:bold'>Material</td>"
@@ -969,7 +982,7 @@ function imprimirFactura(id){
       +"<td style='padding:4px 0;font-weight:bold;text-align:center'>Unidad</td>"
       +"<td style='padding:4px 0;font-weight:bold;text-align:right'>Precio</td>"
       +"<td style='padding:4px 0;font-weight:bold;text-align:right'>Subtotal</td></tr>";
-    (o.materiales||[]).forEach(function(m){
+    getMateriales(o).forEach(function(m){
       var sub=m.cant&&m.precio?"RD$"+Number(m.cant*m.precio).toLocaleString("es-DO"):"--";
       var pre=m.precio?"RD$"+Number(m.precio).toLocaleString("es-DO"):"--";
       matsHTML+="<tr>"
