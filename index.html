@@ -500,10 +500,12 @@ function renderOrdenes(){
 
 function openModalOrden(id,clienteId){
   const o=id?STATE.ordenes.find(x=>x.id===id):null;
+  if(o){console.log('ORDEN COMPLETA:',JSON.stringify(o));console.log('MATERIALES:',JSON.stringify(o.materiales));console.log('PAGOS:',JSON.stringify(o.pagos));}
   const autoNotas=STATE.notasBanco.filter(n=>n.auto).map(n=>n.texto).join('\n');
   // Load materiales and pagos safely
   tempMats=[];
   tempPagos=[];
+  console.log('LOADING - o.materiales type:', typeof o?.materiales, 'isArray:', Array.isArray(o?.materiales), 'value:', JSON.stringify(o?.materiales));
   if(o){
     try{
       var rawMats=o.materiales||o.Materiales||[];
@@ -517,7 +519,8 @@ function openModalOrden(id,clienteId){
           };
         }).filter(function(m){return m.nombre;});
       }
-    }catch(e){tempMats=[];}
+    }catch(e){console.log('MATS ERROR:',e);tempMats=[];}
+    console.log('tempMats after load:', JSON.stringify(tempMats));
     try{
       var rawPagos=o.pagos||o.Pagos||[];
       if(Array.isArray(rawPagos)){
@@ -526,6 +529,9 @@ function openModalOrden(id,clienteId){
         }).filter(function(p){return p.monto>0;});
       }
     }catch(e){tempPagos=[];}
+    console.log('DEBUG orden:',JSON.stringify(o));
+    console.log('DEBUG tempMats:',JSON.stringify(tempMats));
+    console.log('DEBUG tempPagos:',JSON.stringify(tempPagos));
   }
   const selCli=o?o.clienteId:(clienteId||'');
   const cliOpts=`<option value="">Seleccionar...</option><option value="anonimo"${selCli==='anonimo'?' selected':''}>👤 Anónimo</option>`+STATE.clientes.map(c=>`<option value="${c.id}"${c.id===selCli?' selected':''}>${c.nombre}</option>`).join('');
