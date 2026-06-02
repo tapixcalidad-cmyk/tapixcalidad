@@ -515,7 +515,7 @@ function renderOrdenes(){
   <div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Cliente</th><th>Descripción</th><th>M.Obra</th><th>Mat.</th><th>Acarreo</th><th>Total</th><th>Pagado</th><th>Días</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
   ${lista.length?lista.map(o=>{
     const total=o.mo+o.mat+o.acarreo,pagado=getTotalPagado(o),dias=daysDiff(o.fechaIn),saldo=total-pagado,alerta=saldo>0&&dias>7&&o.estado!=='entregado';
-    return`<tr style="${alerta?'background:rgba(212,146,58,0.06)':''}"><td style="font-size:11px;color:var(--text3)">${o.id.slice(-5)}</td><td><strong>${getClienteNombre(o)}</strong>${o.prioridad==='urgente'?'<br><span class="badge badge-red" style="font-size:10px">⚡ Urgente</span>':''}</td><td style="max-width:150px;font-size:12px;color:var(--text2)"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px">${o.desc}</div></td><td>${fmt(o.mo)}</td><td>${fmt(o.mat)}</td><td>${fmt(o.acarreo)}</td><td style="color:var(--gold);font-weight:600">${fmt(total)}</td><td style="color:${pagado>=total?'var(--green)':'var(--amber)'}">${fmt(pagado)}</td><td style="font-size:11px;color:${dias>7&&saldo>0?'var(--amber)':'var(--text3)'}">${dias}d</td><td>${estadoBadge(o.estado)}</td><td><div style="display:flex;gap:3px"><button class="btn btn-sm" onclick="openModalOrden('${o.id}',null)">Editar</button><button class="btn btn-sm" onclick="imprimirFactura('${o.id}')" title="Imprimir" style="background:rgba(91,155,213,0.1);color:var(--blue);border-color:rgba(91,155,213,0.2)">&#128424;</button><button class="btn btn-sm btn-danger" onclick="delOrden('${o.id}')">✕</button></div></td></tr>`;
+    return`<tr style="${alerta?'background:rgba(212,146,58,0.06)':''}"><td style="font-size:11px;color:var(--text3)">${o.id.slice(-5)}</td><td><strong>${getClienteNombre(o)}</strong>${o.prioridad==='urgente'?'<br><span class="badge badge-red" style="font-size:10px">⚡ Urgente</span>':''}</td><td style="max-width:150px;font-size:12px;color:var(--text2)"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px">${o.desc}</div></td><td>${fmt(o.mo)}</td><td>${fmt(o.mat)}</td><td>${fmt(o.acarreo)}</td><td style="color:var(--gold);font-weight:600">${fmt(total)}</td><td style="color:${pagado>=total?'var(--green)':'var(--amber)'}">${fmt(pagado)}</td><td style="font-size:11px;color:${dias>7&&saldo>0?'var(--amber)':'var(--text3)'}">${dias}d</td><td>${estadoBadge(o.estado)}</td><td><div style="display:flex;gap:3px"><button class="btn btn-sm" onclick="openModalOrden('${o.id}',null)">Editar</button><button class="btn btn-sm" onclick="imprimirFactura('${o.id}')" title="Imprimir" style="background:rgba(91,155,213,0.1);color:var(--blue);border-color:rgba(91,155,213,0.2)">&#128424;</button><button class=\"btn btn-sm\" onclick=\"listaCompras(\'${o.id}\')\" title=\"Lista compras\" style=\"background:rgba(92,184,122,0.1);color:var(--green);border-color:rgba(92,184,122,0.2)\">&#128722;</button><button class="btn btn-sm btn-danger" onclick="delOrden('${o.id}')">✕</button></div></td></tr>`;
   }).join(''):'<tr><td colspan="11"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Sin órdenes</div><p>Crea una nueva orden de trabajo</p></div></td></tr>'}
   </tbody></table></div></div>`;
 }
@@ -1041,7 +1041,7 @@ function imprimirFactura(id){
   // Materiales
   var matsHTML="";
   if(getMateriales(o).length){
-    matsHTML+="<p style='font-size:11px;color:#8B6914;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;font-family:Arial'>Materiales utilizados</p>";
+    matsHTML+="<div class='no-imprimir'><p style='font-size:11px;color:#8B6914;text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;font-family:Arial'>Materiales utilizados</p>";
     matsHTML+="<table style='width:100%;border-collapse:collapse;font-size:12px'>"
       +"<tr style='border-bottom:2px solid #e8c97a'><td style='padding:4px 0;font-weight:bold'>Material</td>"
       +"<td style='padding:4px 0;font-weight:bold;text-align:center'>Cant.</td>"
@@ -1058,7 +1058,7 @@ function imprimirFactura(id){
         +"<td style='padding:4px 0;border-bottom:1px solid #f5ead8;text-align:right'>"+pre+"</td>"
         +"<td style='padding:4px 0;border-bottom:1px solid #f5ead8;text-align:right'>"+sub+"</td></tr>";
     });
-    matsHTML+="</table>";
+    matsHTML+="</table></div>";
   }
 
   var saldoBox=saldo>0
@@ -1082,7 +1082,7 @@ function imprimirFactura(id){
     +".total-row td{font-weight:bold;font-size:16px;border-top:2px solid #c9a84c;padding-top:10px;color:#6B4F0A;}"
     +".cost-row td{border-bottom:1px solid #f5ead8;padding:7px 4px;}"
     +".footer{font-size:10px;color:#bba060;text-align:center;margin-top:24px;letter-spacing:1px;}"
-    +"@media print{.no-print{display:none!important}}";
+    +"@media print{.no-print{display:none!important}.no-imprimir{display:none!important}}";
 
   var H="<!DOCTYPE html><html><head><meta charset=UTF-8>"
     +"<title>Factura #"+o.id.slice(-6)+" - Tapixcalidad</title>"
@@ -1138,16 +1138,91 @@ function imprimirFactura(id){
     +notasBox
     +"<hr class='divider'>"
     +"<p class='footer'>Gracias por su preferencia &nbsp;&middot;&nbsp; TAPIXCALIDAD</p>"
+    +"<div style='display:flex;gap:8px;margin-top:12px'>"
     +"<button class='no-print' onclick='window.print()' "
-    +"style='width:100%;padding:12px;background:#c9a84c;border:none;border-radius:8px;"
-    +"font-size:14px;font-weight:bold;cursor:pointer;color:#3a2e1a;font-family:Arial;margin-top:12px'>"
+    +"style='flex:1;padding:12px;background:#c9a84c;border:none;border-radius:8px;"
+    +"font-size:14px;font-weight:bold;cursor:pointer;color:#3a2e1a;font-family:Arial'>"
     +"Imprimir / Guardar como PDF</button>"
+    +"<button class='no-print' onclick='document.querySelectorAll(\".no-imprimir\").forEach(function(el){el.style.display=el.style.display===\"none\"?\"\":\"none\";});' "
+    +"style='padding:12px 14px;background:#3a3935;border:none;border-radius:8px;"
+    +"font-size:12px;font-weight:bold;cursor:pointer;color:#f0ede6;font-family:Arial' title='Mostrar/ocultar materiales al imprimir'>"
+    +"&#128065; Materiales</button>"
+    +"</div>"
     +"</body></html>";
 
   var win=window.open("","_blank","width=540,height=800");
   if(win){win.document.write(H);win.document.close();}
   else notify("Permite ventanas emergentes para imprimir",true);
 }
+
+// -- LISTA DE COMPRAS --
+function listaCompras(id){
+  var o=STATE.ordenes.find(function(x){return x.id===id;});
+  if(!o){notify('Orden no encontrada',true);return;}
+  var mats=getMateriales(o);
+  if(!mats.length){notify('Esta orden no tiene materiales',true);return;}
+  var c=o.clienteId==='anonimo'
+    ?{nombre:'Anonimo'}
+    :(STATE.clientes.find(function(x){return x.id===o.clienteId;})||{nombre:'--'});
+
+  var total=mats.reduce(function(s,m){return s+(m.cant*m.precio);},0);
+
+  var filas='';
+  mats.forEach(function(m,i){
+    var sub=m.cant&&m.precio?'RD$'+Number(m.cant*m.precio).toLocaleString('es-DO'):'--';
+    var pre=m.precio?'RD$'+Number(m.precio).toLocaleString('es-DO'):'--';
+    filas+='<tr style="background:'+(i%2===0?'#fff':'#fdf8f0')+'">'
+      +'<td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;font-size:14px">'+m.nombre+'</td>'
+      +'<td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;text-align:center;font-size:14px">'+( m.cant||'--')+'</td>'
+      +'<td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;text-align:center;font-size:14px">'+(m.unidad||'--')+'</td>'
+      +'<td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;text-align:right;font-size:13px;color:#8B6914">'+pre+'</td>'
+      +'<td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;text-align:right;font-size:13px;font-weight:bold;color:#6B4F0A">'+sub+'</td>'
+      +'<td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;text-align:center">'
+      +'<input type="checkbox" style="width:18px;height:18px;accent-color:#c9a84c"></td>'
+      +'</tr>';
+  });
+
+  var H='<!DOCTYPE html><html><head><meta charset=UTF-8>'
+    +'<title>Lista de compras - '+o.desc.slice(0,30)+'</title>'
+    +'<style>'
+    +'body{font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;padding:28px;color:#3a2e1a;}'
+    +'@media print{.no-print{display:none!important}}'
+    +'</style></head><body>'
+    +'<div style="text-align:center;margin-bottom:6px">'
+    +'<img src="'+document.getElementById('tapix-logo').src+'" style="width:160px;max-width:100%" alt="Tapixcalidad"></div>'
+    +'<div style="text-align:center;font-size:10px;color:#a07830;letter-spacing:2px;text-transform:uppercase;margin-bottom:12px">Lista de compras</div>'
+    +'<div style="background:#fdf8f0;border:1px solid #e8c97a;border-radius:8px;padding:12px 16px;margin-bottom:16px">'
+    +'<div style="font-size:13px"><strong>Cliente:</strong> '+c.nombre+'</div>'
+    +'<div style="font-size:13px;margin-top:4px"><strong>Orden:</strong> '+o.desc+'</div>'
+    +'<div style="font-size:13px;margin-top:4px"><strong>Fecha:</strong> '+new Date().toLocaleDateString('es-DO')+'</div>'
+    +'</div>'
+    +'<table style="width:100%;border-collapse:collapse">'
+    +'<thead><tr style="background:#c9a84c">'
+    +'<th style="padding:10px 12px;text-align:left;color:#3a2e1a;font-size:12px">MATERIAL</th>'
+    +'<th style="padding:10px 12px;text-align:center;color:#3a2e1a;font-size:12px">CANT.</th>'
+    +'<th style="padding:10px 12px;text-align:center;color:#3a2e1a;font-size:12px">UNIDAD</th>'
+    +'<th style="padding:10px 12px;text-align:right;color:#3a2e1a;font-size:12px">PRECIO APROX.</th>'
+    +'<th style="padding:10px 12px;text-align:right;color:#3a2e1a;font-size:12px">SUBTOTAL APROX.</th>'
+    +'<th style="padding:10px 12px;text-align:center;color:#3a2e1a;font-size:12px">OK</th>'
+    +'</tr></thead>'
+    +'<tbody>'+filas+'</tbody>'
+    +'<tfoot><tr style="background:#f5ead8">'
+    +'<td colspan="4" style="padding:10px 12px;font-weight:bold;font-size:13px">TOTAL APROXIMADO</td>'
+    +'<td style="padding:10px 12px;text-align:right;font-weight:bold;font-size:14px;color:#6B4F0A">RD$'+Number(total).toLocaleString('es-DO')+'</td>'
+    +'<td></td>'
+    +'</tr></tfoot>'
+    +'</table>'
+    +'<p style="font-size:11px;color:#a07830;font-style:italic;margin-top:12px;text-align:center">* Los precios son aproximados y pueden variar al momento de la compra.</p>'
+    +'<div style="margin-top:16px;display:flex;gap:8px" class="no-print">'
+    +'<button onclick="window.print()" style="flex:1;padding:12px;background:#c9a84c;border:none;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer;color:#3a2e1a;font-family:Arial">Imprimir / Guardar PDF</button>'
+    +'</div>'
+    +'</body></html>';
+
+  var win=window.open('','_blank','width=640,height=700');
+  if(win){win.document.write(H);win.document.close();}
+  else notify('Permite ventanas emergentes para imprimir',true);
+}
+
 
 // -- CONTACT PICKER --
 async function pickContact(){
