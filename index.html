@@ -493,7 +493,7 @@ function renderDashboard(){
         +'<div style="display:flex;gap:6px;align-items:center"><span style="font-size:11px;color:var(--red);font-weight:600">'+fmt(saldo)+'</span>'
         +'<span style="font-size:10px;color:var(--amber)">'+dias+'d</span></div></div>';
     }).join('')
-    +(alertas.length>3?'<div style="font-size:11px;color:var(--text3);text-align:right;cursor:pointer" onclick="showPage('alertas')">Ver todas →</div>':'')
+    +(alertas.length>3?'<div style="font-size:11px;color:var(--text3);text-align:right;cursor:pointer" onclick="showPage(\'alertas\')">Ver todas &#8594;</div>':'')
     +'</div>'
     :'<div class="card" style="padding:14px 16px;border-color:rgba(92,184,122,0.3)">'
     +'<div style="font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px">✓ Cobros al día</div>'
@@ -505,14 +505,14 @@ function renderDashboard(){
     +'<div class="card" style="margin-bottom:16px">'
     +'<div class="card-header">'
     +'<span class="card-title">'+chartTitle+'</span>'
-    +(chartMesActivo?'<button class="btn btn-sm" onclick="STATE.chartMes=null;renderPage('dashboard')">← Volver a meses</button>':'')
+    +(chartMesActivo?'<button class="btn btn-sm" onclick="STATE.chartMes=null;renderPage(\'dashboard\')">← Volver a meses</button>':'')
     +'</div>'
     +'<div style="display:flex;align-items:flex-end;gap:'+(barData.length>15?'2':'5')+'px;height:110px;padding:12px 14px 8px">'
     +barData.map(function(b){
       var pct=maxV>0?Math.max(4,(b.v/maxV*100)):4;
       var clickable=!chartMesActivo&&b.ym;
       return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;justify-content:flex-end;'+(clickable?'cursor:pointer':'')+'" '
-        +(clickable?'onclick="STATE.chartMes=''+b.ym+'';renderPage('dashboard')" title="Ver días de '+b.l+'"':'')+'>'
+        +(clickable?' data-ym="'+b.ym+'" class="dash-bar-click"':'')+'>'
         +'<div style="width:100%;border-radius:3px 3px 0 0;background:'+(b.cur?'var(--gold)':'var(--bg4)')+';min-height:4px;height:'+pct+'%;transition:background 0.2s" title="'+fmt(b.v)+'"></div>'
         +'<div style="font-size:'+(barData.length>15?'8':'9')+'px;color:var(--text3)">'+b.l+'</div>'
         +'</div>';
@@ -521,7 +521,7 @@ function renderDashboard(){
 
     // Last orders + Last gastos
     +'<div style="display:grid;grid-template-columns:3fr 2fr;gap:14px;margin-bottom:16px">'
-    +'<div class="card"><div class="card-header"><span class="card-title">Últimas órdenes</span><button class="btn btn-sm" onclick="showPage('ordenes')">Ver todas</button></div>'
+    +'<div class="card"><div class="card-header"><span class="card-title">Últimas órdenes</span><button class="btn btn-sm" onclick="showPage(\'ordenes\')">Ver todas</button></div>'
     +'<div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Trabajo</th><th>Total</th><th>Pagado</th><th>Estado</th></tr></thead><tbody>'
     +(rec.length?rec.map(function(o){
       var total=o.mo+o.mat+o.acarreo,pagado=getTotalPagado(o);
@@ -533,7 +533,7 @@ function renderDashboard(){
     }).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px">Sin órdenes</td></tr>')
     +'</tbody></table></div></div>'
 
-    +'<div class="card"><div class="card-header"><span class="card-title">Últimos gastos</span><button class="btn btn-sm" onclick="showPage('gastos')">Ver todos</button></div>'
+    +'<div class="card"><div class="card-header"><span class="card-title">Últimos gastos</span><button class="btn btn-sm" onclick="showPage(\'gastos\')">Ver todos</button></div>'
     +'<div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Categoría</th><th>Monto</th></tr></thead><tbody>'
     +(recGastos.length?recGastos.map(function(g){
       return '<tr><td style="font-size:10px;color:var(--text3)">'+fmtD(g.fecha)+'</td>'
@@ -621,9 +621,9 @@ function renderOrdenes(){
   return `
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
     <div></div><div style="display:flex;gap:7px;flex-wrap:wrap">
-      <input id="q-ord" value="${STATE._qOrd||''}" placeholder="Buscar..." style="width:130px" oninput="STATE._qOrd=this.value;renderPage('ordenes')">
-      <select id="filt-est" style="width:130px" onchange="STATE._filtEst=this.value;renderPage('ordenes')"><option value="">Todos los estados</option>${estOpts}</select>
-      <select id="filt-cli" style="width:130px" onchange="STATE._filtCli=this.value;renderPage('ordenes')"><option value="">Todos los clientes</option>${cliOpts}</select>
+      <input id="q-ord" value="${STATE._qOrd||''}" placeholder="Buscar..." style="width:130px" oninput="STATE._qOrd=this.value;renderPage(\'ordenes\')">
+      <select id="filt-est" style="width:130px" onchange="STATE._filtEst=this.value;renderPage(\'ordenes\')"><option value="">Todos los estados</option>${estOpts}</select>
+      <select id="filt-cli" style="width:130px" onchange="STATE._filtCli=this.value;renderPage(\'ordenes\')"><option value="">Todos los clientes</option>${cliOpts}</select>
       <button class="btn btn-gold" onclick="openModalOrden(null,null)">+ Nueva orden</button>
     </div>
   </div>
@@ -1123,9 +1123,9 @@ async function toggleNota(id,auto){
 
 // -- BIND EVENTS --
 function bindEvents(p){
-  if(p==='dashboard'){const ms=document.getElementById('dash-mes');if(ms)ms.addEventListener('change',e=>{STATE.mes=e.target.value;renderPage('dashboard');});}
+  if(p==='dashboard'){var ms=document.getElementById('dash-mes');if(ms)ms.addEventListener('change',function(e){STATE.mes=e.target.value;renderPage('dashboard');});document.querySelectorAll('.dash-bar-click').forEach(function(el){el.addEventListener('click',function(){STATE.chartMes=el.dataset.ym||null;renderPage('dashboard');});});}
   if(p==='ingresos'){const mi=document.getElementById('ing-mes');if(mi)mi.addEventListener('change',e=>{STATE.mesIng=e.target.value;renderPage('ingresos');});}
-  if(p==='gastos'){const mg=document.getElementById('gas-mes');if(mg)mg.addEventListener('change',e=>{STATE.mesGas=e.target.value;renderPage('gastos');});}
+  if(p==='gastos'){var mg=document.getElementById('gas-mes');if(mg)mg.addEventListener('change',function(e){STATE.mesGas=e.target.value;renderPage('gastos');});}
 }
 
 // -- AUTH --
@@ -1159,7 +1159,7 @@ function renderCobrar(){
       +'<td style="padding:10px 14px;color:var(--green)">'+fmt(pagado)+'</td>'
       +'<td style="padding:10px 14px;color:var(--red);font-weight:600">'+fmt(saldo)+'</td>'
       +'<td style="padding:10px 14px"><span style="font-size:11px;color:'+(alerta?'var(--amber)':'var(--text3)')+'">'+dias+' días</span></td>'
-      +'<td style="padding:10px 14px"><button class="btn btn-sm btn-gold" onclick="pagoRapido(''+o.id+'')">+ Pago</button></td>'
+      +'<td style="padding:10px 14px"><button class="btn btn-sm btn-gold" data-pagoid="'+o.id+'">+ Pago</button></td>'
       +'</tr>';
   }).join('');
   return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">'
@@ -1192,12 +1192,16 @@ function pagoRapido(id){
     +'<div class="form-group" style="margin-bottom:12px"><label class="form-label">Monto (RD$)</label>'
     +'<input type="number" id="pr-monto" value="'+saldo+'" placeholder="0"></div>'
     +'<div style="display:flex;gap:8px">'
-    +'<button class="btn" style="flex:1" onclick="var m=parseFloat(document.getElementById('pr-monto').value)||0;if(m>0){document.getElementById('pr-monto').value='+saldo+';}">Saldo completo</button>'
+    +'<button class="btn" id="btn-saldo-completo" style="flex:1">Saldo completo</button>'
     +'</div>'
     +'</div>'
     +'<div class="modal-footer"><button class="btn" onclick="closeModal()">Cancelar</button>'
-    +'<button class="btn btn-gold" onclick="guardarPagoRapido(''+id+'')">Guardar pago</button></div></div>';
+    +'<button class="btn btn-gold" id="btn-guardar-pago">Guardar pago</button></div></div>';
   showModal(html);
+  var bsc=document.getElementById("btn-saldo-completo");
+  if(bsc) bsc.addEventListener("click",function(){var inp=document.getElementById("pr-monto");if(inp)inp.value=saldo;});
+  var bgp=document.getElementById("btn-guardar-pago");
+  if(bgp) bgp.addEventListener("click",function(){guardarPagoRapido(id);});
 }
 
 async function guardarPagoRapido(id){
