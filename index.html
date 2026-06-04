@@ -306,10 +306,7 @@ const uid=()=>crypto.randomUUID();
 const monthOpts=()=>{const now=new Date();const r=[];for(let i=0;i<12;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const v=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');r.push({v,l:MESES[d.getMonth()]+' '+d.getFullYear()});}return r;};
 const filterByMonth=(list,mes,field='fechaIn')=>list.filter(x=>{
   var dateStr=x[field]||x.fechaReg||x.fechaIn||'';
-  if(!dateStr)return false;
-  var d=dateStr.split('-');
-  var ym=mes.split('-');
-  return d[0]===ym[0]&&d[1]===ym[1];
+  return (dateStr||'').slice(0,7)===mes;
 });
 
 // -- STATE --
@@ -409,33 +406,53 @@ function renderPage(p){
 
 // -- DASHBOARD --
 
+function dateInWeek(dateStr, weekStart){
+  // Compare YYYY-MM-DD strings directly to avoid timezone issues
+  if(!dateStr||!weekStart)return false;
+  var ds=dateStr.slice(0,10);
+  var ws=weekStart.slice(0,10);
+  // Calculate week end
+  var wsParts=ws.split('-');
+  var wsDate=new Date(parseInt(wsParts[0]),parseInt(wsParts[1])-1,parseInt(wsParts[2]));
+  var weDate=new Date(wsDate);weDate.setDate(wsDate.getDate()+6);
+  var we=weDate.getFullYear()+'-'+String(weDate.getMonth()+1).padStart(2,'0')+'-'+String(weDate.getDate()).padStart(2,'0');
+  return ds>=ws&&ds<=we;
+}
+
 function getDashOrds(view){
   if(!view||view.level==='month'){
     var mes=view?view.mes:STATE.mes;
     var mesYM2=mes.split('-');
     return STATE.ordenes.filter(function(o){
-      var ds=o.fechaIn||o.fechaReg||'';
-      if(!ds)return false;
-      var d=ds.split('-');
-      return d[0]===mesYM2[0]&&d[1]===mesYM2[1];
+      var ds=(o.fechaIn||o.fechaReg||'').slice(0,7);
+      return ds===mes;
     });
   } else if(view.level==='week'){
-    var ws=new Date(view.week),we=new Date(ws);we.setDate(we.getDate()+6);we.setHours(23,59,59);
-    return STATE.ordenes.filter(function(o){var d=new Date(o.fechaIn||o.fechaReg||'');return d>=ws&&d<=we;});
+    return STATE.ordenes.filter(function(o){
+      return dateInWeek(o.fechaIn||o.fechaReg||'', view.week);
+    });
   } else {
-    var ds=view.day||'';
-    return STATE.ordenes.filter(function(o){return(o.fechaIn||o.fechaReg||'').startsWith(ds);});
+    var day=view.day||'';
+    return STATE.ordenes.filter(function(o){
+      return (o.fechaIn||o.fechaReg||'').slice(0,10)===day;
+    });
   }
 }
 function getDashGastos(view){
   if(!view||view.level==='month'){
     var mes=view?view.mes:STATE.mes;
-    return STATE.gastos.filter(function(g){var d=g.fecha.split('-');var ym=mes.split('-');return d[0]===ym[0]&&d[1]===ym[1];});
+    return STATE.gastos.filter(function(g){
+      return (g.fecha||'').slice(0,7)===mes;
+    });
   } else if(view.level==='week'){
-    var ws=new Date(view.week),we=new Date(ws);we.setDate(we.getDate()+6);we.setHours(23,59,59);
-    return STATE.gastos.filter(function(g){var d=new Date(g.fecha);return d>=ws&&d<=we;});
+    return STATE.gastos.filter(function(g){
+      return dateInWeek(g.fecha||'', view.week);
+    });
   } else {
-    return STATE.gastos.filter(function(g){return g.fecha===(view.day||'');});
+    var day=view.day||'';
+    return STATE.gastos.filter(function(g){
+      return (g.fecha||'').slice(0,10)===day;
+    });
   }
 }
 
@@ -989,12 +1006,8 @@ async function delOrden(id){if(!confirm('¿Eliminar orden?'))return;await softDe
 function renderIngresos(){
   const mesIng=STATE.mesIng||STATE.mes;
   // Filter by fechaIn OR fechaReg matching the month
-  const mesYM=mesIng.split('-');
   const allOrds=STATE.ordenes.filter(function(o){
-    var dateStr=o.fechaIn||o.fechaReg||'';
-    if(!dateStr)return false;
-    var d=dateStr.split('-');
-    return d[0]===mesYM[0]&&d[1]===mesYM[1];
+    return (o.fechaIn||o.fechaReg||'').slice(0,7)===mesIng;
   });
   const ords=allOrds.filter(o=>getTotalPagado(o)>0);
   let ef=0,tar=0,tr=0;ords.forEach(o=>getPagos(o).forEach(p=>{if(p.tipo==='efectivo')ef+=p.monto;else if(p.tipo==='tarjeta')tar+=p.monto;else tr+=p.monto;}));
