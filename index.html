@@ -444,17 +444,34 @@ function renderDashboard(){
   var view=STATE.dashView;
   var ordsF=getDashOrds(view);
   var gastsF=getDashGastos(view);
+
+  // Ingresos y gastos del MES ACTUAL (selector)
   var totalIng=ordsF.reduce(function(s,o){return s+getTotalPagado(o);},0);
   var totalGas=gastsF.reduce(function(s,g){return s+g.monto;},0);
-  var porCobrar=ordsF.reduce(function(s,o){return s+Math.max(0,(o.mo+o.mat+o.acarreo)-getTotalPagado(o));},0);
-  var gan=totalIng-totalGas;
-  var now=new Date(),dow=now.getDay();
-  var sow=new Date(now);sow.setDate(now.getDate()-dow);sow.setHours(0,0,0,0);
-  var solw=new Date(sow);solw.setDate(sow.getDate()-7);
-  var ingW=STATE.ordenes.reduce(function(s,o){var d=new Date(o.fechaIn||o.fechaReg||'');return d>=sow?s+getTotalPagado(o):s;},0);
-  var ingLW=STATE.ordenes.reduce(function(s,o){var d=new Date(o.fechaIn||o.fechaReg||'');return d>=solw&&d<sow?s+getTotalPagado(o):s;},0);
-  var wdiff=ingLW>0?Math.round(((ingW-ingLW)/ingLW)*100):ingW>0?100:0;
-  var wup=ingW>=ingLW;
+
+  // Ganancia GLOBAL (todos los tiempos)
+  var totalIngGlobal=STATE.ordenes.reduce(function(s,o){return s+getTotalPagado(o);},0);
+  var totalGasGlobal=STATE.gastos.reduce(function(s,g){return s+g.monto;},0);
+  var ganGlobal=totalIngGlobal-totalGasGlobal;
+
+  // Cuentas por cobrar GLOBAL
+  var porCobrarGlobal=STATE.ordenes.reduce(function(s,o){
+    var saldo=(o.mo+o.mat+o.acarreo)-getTotalPagado(o);
+    return s+(saldo>0&&o.estado!=='entregado'?saldo:0);
+  },0);
+
+  // Comparador ESTE MES vs MES PASADO
+  var now=new Date();
+  var mesCur=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  var prevDate=new Date(now.getFullYear(),now.getMonth()-1,1);
+  var mesPrev=prevDate.getFullYear()+'-'+String(prevDate.getMonth()+1).padStart(2,'0');
+  var ingMesCur=filterByMonth(STATE.ordenes,mesCur).reduce(function(s,o){return s+getTotalPagado(o);},0);
+  var ingMesPrev=filterByMonth(STATE.ordenes,mesPrev).reduce(function(s,o){return s+getTotalPagado(o);},0);
+  var mdiff=ingMesPrev>0?Math.round(((ingMesCur-ingMesPrev)/ingMesPrev)*100):ingMesCur>0?100:0;
+  var mup=ingMesCur>=ingMesPrev;
+  var MN2=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  var nomMesCur=MN2[now.getMonth()];
+  var nomMesPrev=MN2[prevDate.getMonth()];
   var MS=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
   var MN=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
   var DN=["Dom","Lun","Mar","Mie","Jue","Vie","Sab"];
@@ -513,17 +530,21 @@ function renderDashboard(){
     +'<button class="btn btn-sm" id="btn-reset-dash">Hoy</button></div>';
 
   H+='<div class="metrics">'
-    +'<div class="metric"><div class="metric-label">Ingresos</div><div class="metric-val" style="color:var(--gold)">'+fmt(totalIng)+'</div><div class="metric-sub">'+ordsF.length+' ordenes</div></div>'
-    +'<div class="metric"><div class="metric-label">Ganancia</div><div class="metric-val" style="color:'+(gan>=0?'var(--green)':'var(--red)')+'">'+fmt(gan)+'</div></div>'
-    +'<div class="metric"><div class="metric-label">Por cobrar</div><div class="metric-val" style="color:var(--blue)">'+fmt(porCobrar)+'</div></div>'
-    +'<div class="metric"><div class="metric-label">Gastos</div><div class="metric-val" style="color:var(--red)">'+fmt(totalGas)+'</div><div class="metric-sub">'+gastsF.length+' reg.</div></div>'
+    +'<div class="metric"><div class="metric-label">Ingresos del mes</div><div class="metric-val" style="color:var(--gold)">'+fmt(totalIng)+'</div><div class="metric-sub">'+ordsF.length+' ordenes</div></div>'
+    +'<div class="metric"><div class="metric-label">Gastos del mes</div><div class="metric-val" style="color:var(--red)">'+fmt(totalGas)+'</div><div class="metric-sub">'+gastsF.length+' registros</div></div>'
+    +'<div class="metric"><div class="metric-label">Ganancia global</div><div class="metric-val" style="color:'+(ganGlobal>=0?'var(--green)':'var(--red)')+'">'+fmt(ganGlobal)+'</div><div class="metric-sub">todos los tiempos</div></div>'
+    +'<div class="metric"><div class="metric-label">Por cobrar global</div><div class="metric-val" style="color:var(--blue)">'+fmt(porCobrarGlobal)+'</div><div class="metric-sub">saldo pendiente total</div></div>'
     +'</div>';
 
   H+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'
-    +'<div class="card" style="padding:14px 16px"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Esta semana vs semana pasada</div>'
+    +'<div class="card" style="padding:14px 16px">'
+    +'<div style="font-size:10px;color:var(--text3);text-transform:uppercase;margin-bottom:8px">'+nomMesCur+' vs '+nomMesPrev+'</div>'
     +'<div style="display:flex;align-items:center;justify-content:space-between">'
-    +'<div><div style="font-size:20px;font-weight:600;color:var(--gold)">'+fmt(ingW)+'</div><div style="font-size:11px;color:var(--text3)">pasada: '+fmt(ingLW)+'</div></div>'
-    +'<div style="font-size:14px;font-weight:700;padding:6px 12px;border-radius:var(--r);background:'+(wup?'rgba(92,184,122,0.15)':'rgba(224,85,85,0.15)')+';color:'+(wup?'var(--green)':'var(--red)')+';">'+(wup?'&#9650;':'&#9660;')+' '+Math.abs(wdiff)+'%</div>'
+    +'<div>'
+    +'<div style="font-size:20px;font-weight:600;color:var(--gold)">'+fmt(ingMesCur)+'</div>'
+    +'<div style="font-size:11px;color:var(--text3);margin-top:2px">'+nomMesPrev+': '+fmt(ingMesPrev)+'</div>'
+    +'</div>'
+    +'<div style="font-size:14px;font-weight:700;padding:6px 12px;border-radius:var(--r);background:'+(mup?'rgba(92,184,122,0.15)':'rgba(224,85,85,0.15)')+';color:'+(mup?'var(--green)':'var(--red)')+';">'+(mup?'&#9650;':'&#9660;')+' '+Math.abs(mdiff)+'%</div>'
     +'</div></div>'
     +(alertas.length
       ?'<div class="card" style="padding:14px 16px;border-color:rgba(212,146,58,0.4)"><div style="font-size:10px;color:var(--amber);text-transform:uppercase;margin-bottom:8px">&#9888; '+alertas.length+' cobro(s) +7 dias</div>'
