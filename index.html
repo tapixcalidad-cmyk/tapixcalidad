@@ -287,9 +287,12 @@ const initials=n=>n.trim().split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toU
 function getTotalPagado(o){
   try{
     var pagos=o.pagos||[];
-    if(typeof pagos==='string') pagos=JSON.parse(pagos)||[];
-    if(!Array.isArray(pagos)) pagos=[];
-    return pagos.reduce(function(s,p){return s+(parseFloat(p.monto)||0);},0);
+    if(typeof pagos==='string'&&pagos){try{pagos=JSON.parse(pagos);}catch(e){pagos=[];}}
+    if(!Array.isArray(pagos))pagos=[];
+    return pagos.reduce(function(s,p){
+      var m=p&&p.monto!=null?parseFloat(p.monto):0;
+      return s+(isNaN(m)?0:m);
+    },0);
   }catch(e){return 0;}
 }
 function getPagos(o){
@@ -301,7 +304,13 @@ function getMateriales(o){
 function getClienteNombre(o){if(o.clienteId==='anonimo')return'Anónimo';var c=STATE.clientes.find(function(x){return x.id===o.clienteId;});return c?c.nombre:'--';}
 const uid=()=>crypto.randomUUID();
 const monthOpts=()=>{const now=new Date();const r=[];for(let i=0;i<12;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const v=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');r.push({v,l:MESES[d.getMonth()]+' '+d.getFullYear()});}return r;};
-const filterByMonth=(list,mes,field='fechaIn')=>list.filter(x=>{const d=(x[field]||x.fechaReg||'').split('-');const ym=mes.split('-');return d[0]===ym[0]&&d[1]===ym[1];});
+const filterByMonth=(list,mes,field='fechaIn')=>list.filter(x=>{
+  var dateStr=x[field]||x.fechaReg||x.fechaIn||'';
+  if(!dateStr)return false;
+  var d=dateStr.split('-');
+  var ym=mes.split('-');
+  return d[0]===ym[0]&&d[1]===ym[1];
+});
 
 // -- STATE --
 const STATE={clientes:[],ordenes:[],gastos:[],catalogo:[],notasBanco:[],page:'dashboard',mes:curYM(),sidebarOpen:true,chartMes:null,dashView:null};
@@ -403,7 +412,13 @@ function renderPage(p){
 function getDashOrds(view){
   if(!view||view.level==='month'){
     var mes=view?view.mes:STATE.mes;
-    return STATE.ordenes.filter(function(o){var d=(o.fechaIn||o.fechaReg||'').split('-');var ym=mes.split('-');return d[0]===ym[0]&&d[1]===ym[1];});
+    var mesYM2=mes.split('-');
+    return STATE.ordenes.filter(function(o){
+      var ds=o.fechaIn||o.fechaReg||'';
+      if(!ds)return false;
+      var d=ds.split('-');
+      return d[0]===mesYM2[0]&&d[1]===mesYM2[1];
+    });
   } else if(view.level==='week'){
     var ws=new Date(view.week),we=new Date(ws);we.setDate(we.getDate()+6);we.setHours(23,59,59);
     return STATE.ordenes.filter(function(o){var d=new Date(o.fechaIn||o.fechaReg||'');return d>=ws&&d<=we;});
@@ -952,7 +967,14 @@ async function delOrden(id){if(!confirm('¿Eliminar orden?'))return;await softDe
 // -- INGRESOS --
 function renderIngresos(){
   const mesIng=STATE.mesIng||STATE.mes;
-  const allOrds=filterByMonth(STATE.ordenes,mesIng);
+  // Filter by fechaIn OR fechaReg matching the month
+  const mesYM=mesIng.split('-');
+  const allOrds=STATE.ordenes.filter(function(o){
+    var dateStr=o.fechaIn||o.fechaReg||'';
+    if(!dateStr)return false;
+    var d=dateStr.split('-');
+    return d[0]===mesYM[0]&&d[1]===mesYM[1];
+  });
   const ords=allOrds.filter(o=>getTotalPagado(o)>0);
   let ef=0,tar=0,tr=0;ords.forEach(o=>getPagos(o).forEach(p=>{if(p.tipo==='efectivo')ef+=p.monto;else if(p.tipo==='tarjeta')tar+=p.monto;else tr+=p.monto;}));
   const selMes=monthOpts().map(o=>`<option value="${o.v}"${o.v===mesIng?' selected':''}>${o.l}</option>`).join('');
